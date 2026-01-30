@@ -1,7 +1,8 @@
 name: liquid_ai
-description: "A new Flutter package project."
+description: "A Flutter package for liquid AI integrations."
 version: 0.0.1
-homepage:
+homepage: https://github.com/danielsogl/liquid_ai
+repository: https://github.com/danielsogl/liquid_ai
 
 environment:
   sdk: ^3.10.8
