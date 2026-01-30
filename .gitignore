@@ -26,6 +26,51 @@ migrate_working_dir/
 /pubspec.lock
 **/doc/api/
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
-/build/
+build/
 /coverage/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/App.framework
+ios/Flutter/engine/
+ios/Flutter/ephemeral/
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Android
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/gradle/
+android/local.properties
+*.apk
+*.aab
+
+# Example app
+example/.dart_tool/
+example/.flutter-plugins
+example/.flutter-plugins-dependencies
+example/build/
+example/ios/Pods/
+example/ios/Podfile.lock
+example/ios/.symlinks/
+example/ios/Flutter/ephemeral/
+example/ios/Flutter/Flutter.framework
+example/ios/Flutter/Generated.xcconfig
+example/android/.gradle/
+example/android/local.properties
+example/pubspec.lock
