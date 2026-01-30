@@ -1,0 +1,246 @@
+import 'dart:async';
+
+import 'package:liquid_ai/liquid_ai.dart';
+
+/// Mock implementation of [LiquidAiPlatform] for testing.
+class MockLiquidAiPlatform extends LiquidAiPlatform {
+  /// Stores the model download status.
+  final Map<String, bool> downloadedModels = {};
+
+  /// Stores the model runners.
+  final Map<String, bool> runners = {};
+
+  /// The progress stream controller.
+  late StreamController<Map<String, dynamic>> _progressController;
+
+  /// Cancelled operation IDs.
+  final Set<String> _cancelledOperations = {};
+
+  /// Counter for generating unique operation IDs.
+  int _operationCounter = 0;
+
+  /// Counter for generating unique runner IDs.
+  int _runnerCounter = 0;
+
+  /// Whether to simulate errors.
+  bool simulateError = false;
+
+  /// The error message to use when simulating errors.
+  String errorMessage = 'Simulated error';
+
+  bool _disposed = false;
+
+  MockLiquidAiPlatform() {
+    _progressController = StreamController<Map<String, dynamic>>.broadcast();
+  }
+
+  @override
+  Future<String?> getPlatformVersion() async {
+    return 'Mock 1.0';
+  }
+
+  void _safeAdd(Map<String, dynamic> event) {
+    if (!_disposed && !_progressController.isClosed) {
+      _progressController.add(event);
+    }
+  }
+
+  @override
+  Future<String> downloadModel(String model, String quantization) async {
+    final operationId = 'op_${++_operationCounter}';
+    final key = '$model:$quantization';
+
+    // Schedule events to be emitted after the method returns
+    unawaited(_emitDownloadEvents(operationId, key));
+
+    return operationId;
+  }
+
+  Future<void> _emitDownloadEvents(String operationId, String key) async {
+    // Small delay to allow subscription to be set up
+    await Future.delayed(Duration.zero);
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    _safeAdd({
+      'operationId': operationId,
+      'type': 'download',
+      'status': 'started',
+      'progress': 0.0,
+      'speed': 0,
+    });
+
+    await Future.delayed(const Duration(milliseconds: 1));
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    if (simulateError) {
+      _safeAdd({
+        'operationId': operationId,
+        'type': 'download',
+        'status': 'error',
+        'error': errorMessage,
+      });
+      return;
+    }
+
+    // Simulate progress
+    for (var i = 1; i <= 10; i++) {
+      if (_cancelledOperations.contains(operationId)) return;
+      _safeAdd({
+        'operationId': operationId,
+        'type': 'download',
+        'status': 'progress',
+        'progress': i / 10,
+        'speed': 1000000,
+      });
+      await Future.delayed(const Duration(milliseconds: 1));
+    }
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    downloadedModels[key] = true;
+
+    _safeAdd({
+      'operationId': operationId,
+      'type': 'download',
+      'status': 'completed',
+      'progress': 1.0,
+    });
+  }
+
+  @override
+  Future<String> loadModel(String model, String quantization) async {
+    final operationId = 'op_${++_operationCounter}';
+    final runnerId = 'runner_${++_runnerCounter}';
+    final key = '$model:$quantization';
+
+    // Schedule events to be emitted after the method returns
+    unawaited(_emitLoadEvents(operationId, runnerId, key));
+
+    return operationId;
+  }
+
+  Future<void> _emitLoadEvents(
+    String operationId,
+    String runnerId,
+    String key,
+  ) async {
+    // Small delay to allow subscription to be set up
+    await Future.delayed(Duration.zero);
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    _safeAdd({
+      'operationId': operationId,
+      'type': 'load',
+      'status': 'started',
+      'progress': 0.0,
+      'speed': 0,
+    });
+
+    await Future.delayed(const Duration(milliseconds: 1));
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    if (simulateError) {
+      _safeAdd({
+        'operationId': operationId,
+        'type': 'load',
+        'status': 'error',
+        'error': errorMessage,
+      });
+      return;
+    }
+
+    // Simulate progress
+    for (var i = 1; i <= 10; i++) {
+      if (_cancelledOperations.contains(operationId)) return;
+      _safeAdd({
+        'operationId': operationId,
+        'type': 'load',
+        'status': 'progress',
+        'progress': i / 10,
+        'speed': 1000000,
+      });
+      await Future.delayed(const Duration(milliseconds: 1));
+    }
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    downloadedModels[key] = true;
+    runners[runnerId] = true;
+
+    _safeAdd({
+      'operationId': operationId,
+      'type': 'load',
+      'status': 'completed',
+      'progress': 1.0,
+      'runnerId': runnerId,
+    });
+  }
+
+  @override
+  Future<bool> unloadModel(String runnerId) async {
+    final existed = runners.containsKey(runnerId);
+    runners.remove(runnerId);
+    return existed;
+  }
+
+  @override
+  Future<bool> isModelDownloaded(String model, String quantization) async {
+    final key = '$model:$quantization';
+    return downloadedModels[key] ?? false;
+  }
+
+  @override
+  Future<void> deleteModel(String model, String quantization) async {
+    final key = '$model:$quantization';
+    downloadedModels.remove(key);
+  }
+
+  @override
+  Future<void> cancelOperation(String operationId) async {
+    _cancelledOperations.add(operationId);
+    _safeAdd({
+      'operationId': operationId,
+      'type': 'download',
+      'status': 'cancelled',
+    });
+  }
+
+  @override
+  Future<ModelStatus> getModelStatus(String model, String quantization) async {
+    final key = '$model:$quantization';
+    final isDownloaded = downloadedModels[key] ?? false;
+    return ModelStatus(
+      type: isDownloaded
+          ? ModelStatusType.downloaded
+          : ModelStatusType.notDownloaded,
+      progress: isDownloaded ? 1.0 : 0.0,
+    );
+  }
+
+  @override
+  Stream<Map<String, dynamic>> get progressEvents => _progressController.stream;
+
+  /// Resets the mock state.
+  void reset() {
+    downloadedModels.clear();
+    runners.clear();
+    _cancelledOperations.clear();
+    _operationCounter = 0;
+    _runnerCounter = 0;
+    simulateError = false;
+    errorMessage = 'Simulated error';
+  }
+
+  /// Disposes of resources.
+  void dispose() {
+    _disposed = true;
+    _progressController.close();
+  }
+}
+
+/// Helper to ignore unhandled futures.
+void unawaited(Future<void> future) {}
