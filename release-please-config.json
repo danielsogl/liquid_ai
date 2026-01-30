@@ -1,0 +1,12 @@
+{
+  "release-type": "dart",
+  "prerelease": false,
+  "draft": false,
+  "include-component-when-empty": true,
+  "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "version-file": "pubspec.yaml"
+    }
+  }
+}
