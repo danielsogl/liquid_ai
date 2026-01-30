@@ -1,0 +1,28 @@
+{
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+        {
+            "text": "Use conventional commit format: <type>(<scope>): <description>"
+        },
+        {
+            "text": "Allowed types: feat, fix, chore, docs, style, refactor, perf, test, ci, build"
+        },
+        {
+            "text": "Monorepo scopes: app (Flutter mobile app in apps/mobile/), web-app (Angular app in apps/web-app/), landing (Next.js page in apps/landing/), functions (Cloud Functions in apps/functions/), firebase (rules, indexes in firebase/), deps (dependency updates), ci (CI/CD workflows in .github/). Omit scope for root-level or cross-cutting changes."
+        },
+        {
+            "text": "Write the description in lowercase, no period at the end. Keep the subject line under 72 characters."
+        },
+        {
+            "text": "Use imperative mood: 'add', 'fix', 'update' — not 'added', 'fixes', 'updated'."
+        },
+        {
+            "text": "For breaking changes, add '!' after scope: feat(app)!: remove legacy auth flow"
+        },
+        {
+            "text": "Use the body for additional context when needed, separated by a blank line. Reference GitHub issues with #<number> in the footer when applicable."
+        },
+        {
+            "text": "If changes span multiple scopes, omit the scope or use the primary one."
+        }
+    ]
+}
