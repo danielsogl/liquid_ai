@@ -24,6 +24,7 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
   String? _generatedJson;
   String? _errorMessage;
   GenerationStats? _stats;
+  int _tokenCount = 0;
 
   StructuredDemo get _currentDemo => structuredDemos[_selectedDemoIndex];
 
@@ -46,6 +47,7 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
       _generatedJson = null;
       _errorMessage = null;
       _stats = null;
+      _tokenCount = 0;
     });
   }
 
@@ -72,6 +74,7 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
       _generatedJson = null;
       _errorMessage = null;
       _stats = null;
+      _tokenCount = 0;
     });
 
     try {
@@ -83,32 +86,40 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
       final options = const GenerationOptions(
         temperature: 0.3,
         maxTokens: 1024,
-      ).withSchema(_currentDemo.schema);
+      );
 
-      final buffer = StringBuffer();
-
-      await for (final event in conversation.generateResponse(
-        ChatMessage(
-          role: ChatMessageRole.user,
-          content: [TextContent(text: prompt)],
-        ),
+      // Use the new generateStructured method
+      await for (final event in conversation.generateStructured(
+        ChatMessage.user(prompt),
+        schema: _currentDemo.schema,
+        fromJson: (json) => json, // Return raw Map for demo display
         options: options,
       )) {
-        if (event is GenerationChunkEvent) {
-          buffer.write(event.chunk);
-          setState(() {
-            _generatedJson = buffer.toString();
-          });
-        } else if (event is GenerationCompleteEvent) {
-          final text = event.message.text ?? buffer.toString();
-          setState(() {
-            _generatedJson = _formatJson(text);
-            _stats = event.stats;
-          });
-        } else if (event is GenerationErrorEvent) {
-          setState(() {
-            _errorMessage = event.error;
-          });
+        switch (event) {
+          case StructuredProgressEvent():
+            // Update token count for progress indication
+            setState(() {
+              _tokenCount = event.tokenCount;
+            });
+          case StructuredCompleteEvent():
+            setState(() {
+              _generatedJson = event.rawJson;
+              _stats = event.stats;
+            });
+          case StructuredErrorEvent():
+            setState(() {
+              _errorMessage = event.error;
+              if (event.rawResponse != null) {
+                _generatedJson = 'Raw response:\n${event.rawResponse}';
+              }
+            });
+          case StructuredCancelledEvent():
+            if (event.partialResponse != null) {
+              setState(() {
+                _generatedJson = 'Cancelled. Partial response:\n'
+                    '${event.partialResponse}';
+              });
+            }
         }
       }
 
@@ -132,27 +143,6 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
       setState(() {
         _isGenerating = false;
       });
-    }
-  }
-
-  String _formatJson(String json) {
-    // Strip markdown code blocks if present
-    var cleaned = json.trim();
-    if (cleaned.startsWith('```json')) {
-      cleaned = cleaned.substring(7);
-    } else if (cleaned.startsWith('```')) {
-      cleaned = cleaned.substring(3);
-    }
-    if (cleaned.endsWith('```')) {
-      cleaned = cleaned.substring(0, cleaned.length - 3);
-    }
-    cleaned = cleaned.trim();
-
-    try {
-      final parsed = jsonDecode(cleaned);
-      return const JsonEncoder.withIndent('  ').convert(parsed);
-    } catch (_) {
-      return json;
     }
   }
 
@@ -326,9 +316,9 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
     ChatState chatState,
     DownloadState downloadState,
   ) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -465,50 +455,44 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
   }
 
   Widget _buildSchemaCard() {
+    // Format the JSON schema for display
+    final schemaJson = const JsonEncoder.withIndent('  ').convert(
+      _currentDemo.schema.toMap(),
+    );
+
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.schema,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Schema Definition',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _currentDemo.description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SelectableText(
-                _currentDemo.schemaCode,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontFamily: 'monospace',
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ],
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        leading: Icon(
+          Icons.schema,
+          color: Theme.of(context).colorScheme.primary,
         ),
+        title: Text(
+          'JSON Schema',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        subtitle: Text(
+          _currentDemo.description,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+            child: SelectableText(
+              schemaJson,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontFamily: 'monospace',
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -552,7 +536,11 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.play_arrow),
-              label: Text(_isGenerating ? 'Generating...' : 'Generate'),
+              label: Text(
+                _isGenerating
+                    ? 'Generating${_tokenCount > 0 ? ' ($_tokenCount tokens)' : '...'}'
+                    : 'Generate',
+              ),
             ),
           ],
         ),

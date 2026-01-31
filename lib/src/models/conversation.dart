@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import '../platform/liquid_ai_platform_interface.dart';
+import '../schema/json_schema.dart';
 import 'chat_message.dart';
 import 'generation_event.dart';
 import 'generation_options.dart';
 import 'leap_function.dart';
+import 'structured_generation.dart';
 
 /// A conversation with a loaded model.
 class Conversation {
@@ -131,6 +133,132 @@ class Conversation {
     }
 
     return buffer.toString();
+  }
+
+  /// Generates a structured response matching the given schema.
+  ///
+  /// This method constrains the model output to match [schema] and
+  /// automatically parses the JSON response using [fromJson].
+  ///
+  /// Example:
+  /// ```dart
+  /// final jokeSchema = JsonSchema.object('A joke')
+  ///     .addString('setup', 'The setup')
+  ///     .addString('punchline', 'The punchline')
+  ///     .build();
+  ///
+  /// await for (final event in conversation.generateStructured(
+  ///   message,
+  ///   schema: jokeSchema,
+  ///   fromJson: (json) => Joke.fromJson(json),
+  /// )) {
+  ///   switch (event) {
+  ///     case StructuredCompleteEvent(:final result):
+  ///       print(result.setup);
+  ///       print(result.punchline);
+  ///     case StructuredErrorEvent(:final error):
+  ///       print('Error: $error');
+  ///   }
+  /// }
+  /// ```
+  Stream<StructuredGenerationEvent<T>> generateStructured<T>(
+    ChatMessage message, {
+    required JsonSchema schema,
+    required T Function(Map<String, dynamic> json) fromJson,
+    GenerationOptions? options,
+  }) {
+    _checkDisposed();
+
+    final controller = StreamController<StructuredGenerationEvent<T>>();
+    final buffer = StringBuffer();
+    var tokenCount = 0;
+
+    final schemaOptions = (options ?? const GenerationOptions()).withSchema(
+      schema,
+    );
+
+    () async {
+      try {
+        await for (final event in generateResponse(
+          message,
+          options: schemaOptions,
+        )) {
+          switch (event) {
+            case GenerationChunkEvent():
+              buffer.write(event.chunk);
+              tokenCount++;
+              // Emit progress event (token count only, not partial JSON)
+              controller.add(StructuredProgressEvent<T>(tokenCount: tokenCount));
+
+            case GenerationCompleteEvent():
+              final rawText = event.message.text ?? buffer.toString();
+
+              // Step 1: Extract JSON from response
+              Map<String, dynamic> jsonMap;
+              try {
+                jsonMap = JsonCleaner.extractJson(rawText);
+              } on FormatException catch (e) {
+                controller.add(
+                  StructuredErrorEvent<T>(
+                    error: 'Failed to extract JSON from response: ${e.message}',
+                    rawResponse: rawText,
+                  ),
+                );
+                await controller.close();
+                return;
+              }
+
+              // Step 2: Convert to typed object using fromJson
+              T result;
+              try {
+                result = fromJson(jsonMap);
+              } catch (e) {
+                controller.add(
+                  StructuredErrorEvent<T>(
+                    error: 'Failed to parse JSON into object: $e',
+                    rawResponse: rawText,
+                  ),
+                );
+                await controller.close();
+                return;
+              }
+
+              // Step 3: Emit success event with clean JSON
+              final cleanJson = const JsonEncoder.withIndent('  ').convert(
+                jsonMap,
+              );
+              controller.add(
+                StructuredCompleteEvent<T>(
+                  result: result,
+                  rawJson: cleanJson,
+                  stats: event.stats,
+                ),
+              );
+              await controller.close();
+
+            case GenerationErrorEvent():
+              controller.add(StructuredErrorEvent<T>(error: event.error));
+              await controller.close();
+
+            case GenerationCancelledEvent():
+              controller.add(
+                StructuredCancelledEvent<T>(
+                  partialResponse: buffer.isNotEmpty ? buffer.toString() : null,
+                ),
+              );
+              await controller.close();
+
+            default:
+              break;
+          }
+        }
+      } catch (e) {
+        controller.add(StructuredErrorEvent<T>(error: e.toString()));
+        await controller.close();
+      }
+    }();
+
+    return controller.stream;
   }
 
   /// Stops the current generation.

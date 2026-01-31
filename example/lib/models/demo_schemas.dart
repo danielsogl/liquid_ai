@@ -73,14 +73,12 @@ class StructuredDemo {
     required this.description,
     required this.schema,
     required this.samplePrompt,
-    required this.schemaCode,
   });
 
   final String title;
   final String description;
   final JsonSchema schema;
   final String samplePrompt;
-  final String schemaCode;
 }
 
 /// List of available demos.
@@ -89,54 +87,22 @@ final structuredDemos = [
     title: 'Joke Generator',
     description: 'Generate jokes with structured metadata',
     schema: jokeSchema,
-    samplePrompt:
-        'Generate a programming joke about recursion as JSON with setup, '
-        'punchline, category, and rating fields.',
-    schemaCode: '''JsonSchema.object('A joke with metadata')
-    .addString('setup', 'The setup of the joke')
-    .addString('punchline', 'The punchline')
-    .addString('category', 'The category',
-        enumValues: ['pun', 'dad-joke', 'programming', ...])
-    .addInt('rating', 'Humor rating 1-10',
-        minimum: 1, maximum: 10)
-    .build()''',
+    samplePrompt: 'Generate a programming joke about recursion in JSON format.',
   ),
   StructuredDemo(
     title: 'Recipe Extractor',
     description: 'Extract structured recipe information',
     schema: recipeSchema,
     samplePrompt:
-        'Generate a JSON recipe for chocolate chip cookies with a crispy '
-        'texture. Include name, description, ingredients list, instructions, '
-        'prep time, cook time, and servings.',
-    schemaCode: '''JsonSchema.object('A recipe')
-    .addString('name', 'The dish name')
-    .addString('description', 'Brief description')
-    .addArray('ingredients', 'List of ingredients',
-        items: StringProperty(...))
-    .addArray('instructions', 'Cooking steps',
-        items: StringProperty(...))
-    .addInt('prepTimeMinutes', 'Prep time')
-    .addInt('cookTimeMinutes', 'Cook time')
-    .addInt('servings', 'Number of servings')
-    .build()''',
+        'Give me a structured recipe for chocolate chip cookies with a '
+        'crispy texture.',
   ),
   StructuredDemo(
     title: 'Sentiment Analyzer',
     description: 'Analyze text sentiment with confidence scores',
     schema: sentimentSchema,
     samplePrompt:
-        'Analyze the sentiment of the following text and return JSON with '
-        'sentiment, confidence, keywords, and explanation: "I absolutely '
-        'love this new feature, but the documentation could be better."',
-    schemaCode: '''JsonSchema.object('Sentiment analysis')
-    .addString('sentiment', 'The sentiment',
-        enumValues: ['positive', 'negative', 'neutral', 'mixed'])
-    .addNumber('confidence', 'Score 0.0-1.0',
-        minimum: 0.0, maximum: 1.0)
-    .addArray('keywords', 'Key phrases',
-        items: StringProperty(...))
-    .addString('explanation', 'Analysis explanation')
-    .build()''',
+        'Analyze the sentiment in JSON format: "I absolutely love this new '
+        'feature, but the documentation could be better."',
   ),
 ];

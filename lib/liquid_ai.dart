@@ -18,6 +18,7 @@ export 'src/models/load_event.dart';
 export 'src/models/model_catalog.dart';
 export 'src/models/model_runner.dart';
 export 'src/models/model_status.dart';
+export 'src/models/structured_generation.dart';
 
 // Exceptions
 export 'src/exceptions/liquid_ai_exception.dart';

@@ -145,8 +145,14 @@ actor ConversationManager {
                     return
                 }
 
-                // Use the SDK's conversation.generateResponse
-                for try await response in currentState.conversation.generateResponse(message: userMessage) {
+                // Parse generation options from Flutter
+                let generationOptions = Self.parseGenerationOptions(options)
+
+                // Use the SDK's conversation.generateResponse with options
+                for try await response in currentState.conversation.generateResponse(
+                    message: userMessage,
+                    generationOptions: generationOptions
+                ) {
                     let isCancelled = await self.isGenerationCancelled(generationId)
                     if isCancelled {
                         self.progressHandler.sendCancelled(generationId: generationId)
@@ -303,6 +309,43 @@ actor ConversationManager {
 
     private func removeGeneration(_ generationId: String) {
         activeGenerations.removeValue(forKey: generationId)
+    }
+
+    // MARK: - Generation Options Parsing
+
+    /// Parses Flutter generation options into LeapSDK GenerationOptions.
+    static func parseGenerationOptions(_ options: [String: Any]?) -> GenerationOptions? {
+        guard let options = options else { return nil }
+
+        var genOptions = GenerationOptions()
+
+        if let temperature = options["temperature"] as? Double {
+            genOptions.temperature = Float(temperature)
+        }
+
+        if let topP = options["topP"] as? Double {
+            genOptions.topP = Float(topP)
+        }
+
+        if let minP = options["minP"] as? Double {
+            genOptions.minP = Float(minP)
+        }
+
+        if let repetitionPenalty = options["repetitionPenalty"] as? Double {
+            genOptions.repetitionPenalty = Float(repetitionPenalty)
+        }
+
+        if let maxTokens = options["maxTokens"] as? Int {
+            genOptions.maxOutputTokens = UInt32(maxTokens)
+        }
+
+        // JSON schema constraint for structured output
+        if let jsonSchema = options["jsonSchemaConstraint"] as? String {
+            print("[LiquidAI] Setting jsonSchemaConstraint: \(jsonSchema.prefix(200))...")
+            genOptions.jsonSchemaConstraint = jsonSchema
+        }
+
+        return genOptions
     }
 
     // MARK: - Serialization Helpers

@@ -240,13 +240,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final downloadState = context.watch<DownloadState>();
     final isLoading = downloadState.isLoading;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isLoading) ...[
+    if (isLoading) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(
@@ -261,42 +261,52 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-            ] else ...[
-              Icon(
-                Icons.smart_toy_outlined,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Select a Model',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose a downloaded model to start a conversation.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: loadedModels.map((model) {
-                  return FilledButton.tonal(
-                    onPressed: () => _loadAndInitializeModel(
-                      model,
-                      chatState,
-                      downloadState,
-                    ),
-                    child: Text(model.name),
-                  );
-                }).toList(),
-              ),
             ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.smart_toy_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Select a Model',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose a downloaded model to start a conversation.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: loadedModels.map((model) {
+                return FilledButton.tonal(
+                  onPressed: () => _loadAndInitializeModel(
+                    model,
+                    chatState,
+                    downloadState,
+                  ),
+                  child: Text(model.name),
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),

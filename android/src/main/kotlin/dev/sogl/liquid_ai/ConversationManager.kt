@@ -1,6 +1,7 @@
 package dev.sogl.liquid_ai
 
 import ai.liquid.leap.Conversation
+import ai.liquid.leap.GenerationOptions
 import ai.liquid.leap.ModelRunner
 import ai.liquid.leap.message.ChatMessage
 import ai.liquid.leap.message.ChatMessageContent
@@ -147,8 +148,11 @@ class ConversationManager(
                 val startTime = System.currentTimeMillis()
                 var isComplete = false
 
-                // Use SDK's conversation.generateResponse with text input
-                state.conversation.generateResponse(userText)
+                // Parse generation options from Flutter
+                val generationOptions = parseGenerationOptions(options)
+
+                // Use SDK's conversation.generateResponse with text input and options
+                state.conversation.generateResponse(userText, generationOptions)
                     .onEach { response ->
                         if (cancelledGenerations.contains(generationId)) {
                             progressHandler.sendCancelled(generationId)
@@ -272,6 +276,36 @@ class ConversationManager(
         conversations.clear()
         activeGenerations.clear()
         cancelledGenerations.clear()
+    }
+
+    // MARK: - Generation Options Parsing
+
+    /// Parses Flutter generation options into LeapSDK GenerationOptions.
+    private fun parseGenerationOptions(options: Map<String, Any>?): GenerationOptions? {
+        if (options == null) return null
+
+        return GenerationOptions().apply {
+            (options["temperature"] as? Double)?.let {
+                temperature = it.toFloat()
+            }
+            (options["topP"] as? Double)?.let {
+                topP = it.toFloat()
+            }
+            (options["minP"] as? Double)?.let {
+                minP = it.toFloat()
+            }
+            (options["repetitionPenalty"] as? Double)?.let {
+                repetitionPenalty = it.toFloat()
+            }
+            (options["maxTokens"] as? Int)?.let {
+                maxOutputTokens = it.toUInt()
+            }
+            // JSON schema constraint for structured output
+            (options["jsonSchemaConstraint"] as? String)?.let { schema ->
+                android.util.Log.d("LiquidAI", "Setting jsonSchemaConstraint: ${schema.take(200)}...")
+                jsonSchemaConstraint = schema
+            }
+        }
     }
 
     // MARK: - Private Helpers

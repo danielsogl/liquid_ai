@@ -150,6 +150,7 @@ class ObjectProperty extends SchemaProperty {
         for (final entry in properties.entries) entry.key: entry.value.toMap(),
       },
       'required': required,
+      'additionalProperties': false,
     };
     if (description != null) map['description'] = description;
     return map;

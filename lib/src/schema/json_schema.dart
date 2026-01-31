@@ -37,14 +37,20 @@ class JsonSchema {
   final List<String> required;
 
   /// Converts this schema to a JSON Schema map.
+  ///
+  /// The returned map follows JSON Schema draft-07 format, which is commonly
+  /// used by constrained generation systems.
   Map<String, dynamic> toMap() {
     return {
+      r'$schema': 'http://json-schema.org/draft-07/schema#',
       'type': 'object',
+      'title': 'Response',
       'description': description,
       'properties': {
         for (final entry in properties.entries) entry.key: entry.value.toMap(),
       },
       'required': required,
+      'additionalProperties': false,
     };
   }
 
