@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'screens/chat_screen.dart';
 import 'screens/models_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/structured_demo_screen.dart';
 
 /// Main app widget with bottom navigation.
 class LiquidAiExampleApp extends StatefulWidget {
@@ -15,7 +16,12 @@ class LiquidAiExampleApp extends StatefulWidget {
 class _LiquidAiExampleAppState extends State<LiquidAiExampleApp> {
   int _currentIndex = 0;
 
-  static const _screens = [ModelsScreen(), ChatScreen(), SettingsScreen()];
+  static const _screens = [
+    ModelsScreen(),
+    ChatScreen(),
+    StructuredDemoScreen(),
+    SettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +57,11 @@ class _LiquidAiExampleAppState extends State<LiquidAiExampleApp> {
               icon: Icon(Icons.chat_outlined),
               selectedIcon: Icon(Icons.chat),
               label: 'Chat',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.data_object_outlined),
+              selectedIcon: Icon(Icons.data_object),
+              label: 'Structured',
             ),
             NavigationDestination(
               icon: Icon(Icons.settings_outlined),

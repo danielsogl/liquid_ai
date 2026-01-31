@@ -1,3 +1,5 @@
+import '../schema/json_schema.dart';
+
 /// Options for text generation.
 class GenerationOptions {
   /// Creates new [GenerationOptions].
@@ -71,6 +73,23 @@ class GenerationOptions {
       maxTokens: maxTokens ?? this.maxTokens,
       jsonSchemaConstraint: jsonSchemaConstraint ?? this.jsonSchemaConstraint,
     );
+  }
+
+  /// Creates a copy with the JSON schema constraint set from a [JsonSchema].
+  ///
+  /// This is a convenience method for applying structured output constraints:
+  ///
+  /// ```dart
+  /// final jokeSchema = JsonSchema.object('A joke')
+  ///     .addString('setup', 'The setup')
+  ///     .addString('punchline', 'The punchline')
+  ///     .build();
+  ///
+  /// final options = GenerationOptions(temperature: 0.7)
+  ///     .withSchema(jokeSchema);
+  /// ```
+  GenerationOptions withSchema(JsonSchema schema) {
+    return copyWith(jsonSchemaConstraint: schema.toJsonString());
   }
 
   @override

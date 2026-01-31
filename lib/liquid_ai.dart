@@ -21,3 +21,8 @@ export 'src/models/model_status.dart';
 
 // Exceptions
 export 'src/exceptions/liquid_ai_exception.dart';
+
+// Schema (for constrained generation)
+export 'src/schema/json_schema.dart';
+export 'src/schema/json_schema_builder.dart';
+export 'src/schema/schema_property.dart';
