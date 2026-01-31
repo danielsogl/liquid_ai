@@ -208,7 +208,21 @@ class Conversation {
                 return;
               }
 
-              // Step 2: Convert to typed object using fromJson
+              // Step 2: Validate against schema
+              final validationResult = schema.validate(jsonMap);
+              if (!validationResult.isValid) {
+                final errorMessages = validationResult.errors.join('\n');
+                controller.add(
+                  StructuredErrorEvent<T>(
+                    error: 'Schema validation failed:\n$errorMessages',
+                    rawResponse: rawText,
+                  ),
+                );
+                await controller.close();
+                return;
+              }
+
+              // Step 3: Convert to typed object using fromJson
               T result;
               try {
                 result = fromJson(jsonMap);
@@ -223,7 +237,7 @@ class Conversation {
                 return;
               }
 
-              // Step 3: Emit success event with clean JSON
+              // Step 4: Emit success event with clean JSON
               final cleanJson = const JsonEncoder.withIndent('  ').convert(
                 jsonMap,
               );

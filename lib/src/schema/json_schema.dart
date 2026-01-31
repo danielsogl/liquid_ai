@@ -1,7 +1,30 @@
 import 'dart:convert';
 
+import 'package:json_schema/json_schema.dart' as js;
+
 import 'json_schema_builder.dart';
 import 'schema_property.dart';
+
+/// Result of validating data against a JSON Schema.
+class SchemaValidationResult {
+  /// Creates a [SchemaValidationResult].
+  const SchemaValidationResult({
+    required this.isValid,
+    required this.errors,
+  });
+
+  /// Whether the data is valid according to the schema.
+  final bool isValid;
+
+  /// List of validation error messages.
+  final List<String> errors;
+
+  @override
+  String toString() {
+    if (isValid) return 'SchemaValidationResult(valid)';
+    return 'SchemaValidationResult(invalid: ${errors.join(', ')})';
+  }
+}
 
 /// A JSON Schema definition for constraining LLM output.
 ///
@@ -16,11 +39,13 @@ import 'schema_property.dart';
 /// ```
 class JsonSchema {
   /// Creates a [JsonSchema] with the given properties.
-  const JsonSchema({
+  JsonSchema({
     required this.description,
     required this.properties,
     required this.required,
-  });
+  }) : _validator = js.JsonSchema.create(
+          _buildSchemaMap(description, properties, required),
+        );
 
   /// Creates a builder for an object schema with the given description.
   static JsonSchemaBuilder object(String description) {
@@ -36,11 +61,14 @@ class JsonSchema {
   /// The names of required properties.
   final List<String> required;
 
-  /// Converts this schema to a JSON Schema map.
-  ///
-  /// The returned map follows JSON Schema draft-07 format, which is commonly
-  /// used by constrained generation systems.
-  Map<String, dynamic> toMap() {
+  /// The underlying json_schema validator.
+  final js.JsonSchema _validator;
+
+  static Map<String, dynamic> _buildSchemaMap(
+    String description,
+    Map<String, SchemaProperty> properties,
+    List<String> required,
+  ) {
     return {
       r'$schema': 'http://json-schema.org/draft-07/schema#',
       'type': 'object',
@@ -54,9 +82,38 @@ class JsonSchema {
     };
   }
 
+  /// Converts this schema to a JSON Schema map.
+  ///
+  /// The returned map follows JSON Schema draft-07 format, which is commonly
+  /// used by constrained generation systems.
+  Map<String, dynamic> toMap() {
+    return _buildSchemaMap(description, properties, required);
+  }
+
   /// Converts this schema to a JSON string.
   String toJsonString() {
     return jsonEncode(toMap());
+  }
+
+  /// Validates a JSON map against this schema.
+  ///
+  /// Returns a [SchemaValidationResult] containing whether the data is valid
+  /// and any error messages.
+  ///
+  /// Example:
+  /// ```dart
+  /// final result = schema.validate({'name': 'Test', 'count': 5});
+  /// if (!result.isValid) {
+  ///   print('Validation failed: ${result.errors.join(', ')}');
+  /// }
+  /// ```
+  SchemaValidationResult validate(Map<String, dynamic> data) {
+    final results = _validator.validate(data);
+    final errors = results.errors.map((e) => e.message).toList();
+    return SchemaValidationResult(
+      isValid: results.isValid,
+      errors: errors,
+    );
   }
 
   @override

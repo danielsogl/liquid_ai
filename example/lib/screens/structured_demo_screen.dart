@@ -109,6 +109,13 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
               _stats = event.stats;
             });
           case StructuredErrorEvent():
+            // Log error details to console for debugging
+            debugPrint('=== Structured Generation Error ===');
+            debugPrint('Error: ${event.error}');
+            if (event.rawResponse != null) {
+              debugPrint('Raw response: ${event.rawResponse}');
+            }
+            debugPrint('===================================');
             setState(() {
               _errorMessage = event.error;
               if (event.rawResponse != null) {
@@ -555,19 +562,44 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
       color: Theme.of(context).colorScheme.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.error_outline,
-              color: Theme.of(context).colorScheme.onErrorContainer,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _errorMessage!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
                   color: Theme.of(context).colorScheme.onErrorContainer,
                 ),
+                const SizedBox(width: 8),
+                Text(
+                  'Error',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(
+                    Icons.copy,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                  tooltip: 'Copy error',
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: _errorMessage!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Error copied to clipboard')),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SelectableText(
+              _errorMessage!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+                fontFamily: 'monospace',
               ),
             ),
           ],
