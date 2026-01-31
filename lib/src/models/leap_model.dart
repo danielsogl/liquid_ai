@@ -53,7 +53,12 @@ enum ModelQuantization {
 
   /// 8-bit quantization (highest quality, largest).
   // ignore: constant_identifier_names
-  q8_0('Q8_0');
+  q8_0('Q8_0'),
+
+  /// 16-bit floating point (full precision, largest size).
+  ///
+  /// Only available for vision-language models.
+  f16('F16');
 
   const ModelQuantization(this.slug);
 
@@ -154,10 +159,14 @@ class LeapModel {
 
   /// Returns the default (recommended) quantization.
   QuantizationInfo get defaultQuantization {
-    // Prefer q4KM as a good balance of size and quality
+    // Prefer q4KM for text models as a good balance of size and quality.
+    // For VL models, prefer Q8_0 as q4KM is not available.
     return quantizations.firstWhere(
       (q) => q.quantization == ModelQuantization.q4KM,
-      orElse: () => quantizations.first,
+      orElse: () => quantizations.firstWhere(
+        (q) => q.quantization == ModelQuantization.q8_0,
+        orElse: () => quantizations.first,
+      ),
     );
   }
 

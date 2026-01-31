@@ -1,11 +1,20 @@
 import 'leap_model.dart';
 
-/// Standard quantization options available for most models.
+/// Standard quantization options available for most text models.
 const _standardQuantizations = [
   QuantizationInfo(quantization: ModelQuantization.q4_0),
   QuantizationInfo(quantization: ModelQuantization.q4KM),
   QuantizationInfo(quantization: ModelQuantization.q5KM),
   QuantizationInfo(quantization: ModelQuantization.q8_0),
+];
+
+/// Quantization options for vision-language models.
+///
+/// VL models only have LEAP SDK manifests for F16 and Q8_0 quantizations.
+/// Other quantizations are not supported via the auto-download mechanism.
+const _vlQuantizations = [
+  QuantizationInfo(quantization: ModelQuantization.q8_0),
+  QuantizationInfo(quantization: ModelQuantization.f16),
 ];
 
 /// Catalog of all available LEAP models.
@@ -102,7 +111,7 @@ const List<LeapModel> leapModelCatalog = [
         'minimal memory requirements. Supports vision-language chat.',
     parameters: '450M',
     modalities: [ModelModality.text, ModelModality.image],
-    quantizations: _standardQuantizations,
+    quantizations: _vlQuantizations,
     contextLength: 32768,
     updatedAt: '2025-08-27',
   ),
@@ -217,24 +226,6 @@ const List<LeapModel> leapModelCatalog = [
   ),
 
   // ============================================================
-  // 1.5B Models - Audio
-  // ============================================================
-  LeapModel(
-    slug: 'LFM2.5-Audio-1.5B',
-    name: 'LFM2.5-Audio-1.5B',
-    description:
-        'End-to-end multimodal speech and text language model for TTS, ASR, '
-        'and voice chat. Does not require separate ASR and TTS components. '
-        'Designed for low latency real-time conversation at 24kHz audio.',
-    parameters: '1.5B',
-    modalities: [ModelModality.text, ModelModality.audio],
-    quantizations: _standardQuantizations,
-    contextLength: 32768,
-    languages: ['en'],
-    updatedAt: '2025-01-06',
-  ),
-
-  // ============================================================
   // 1.6B Models - Vision-Language
   // ============================================================
   LeapModel(
@@ -246,7 +237,7 @@ const List<LeapModel> leapModelCatalog = [
         'stronger real-world performance on-device.',
     parameters: '1.6B',
     modalities: [ModelModality.text, ModelModality.image],
-    quantizations: _standardQuantizations,
+    quantizations: _vlQuantizations,
     contextLength: 32768,
     updatedAt: '2025-01-06',
   ),
@@ -308,7 +299,7 @@ const List<LeapModel> leapModelCatalog = [
         'multi-image comparison and reasoning across multiple images.',
     parameters: '3B',
     modalities: [ModelModality.text, ModelModality.image],
-    quantizations: _standardQuantizations,
+    quantizations: _vlQuantizations,
     contextLength: 32768,
     updatedAt: '2025-10-22',
   ),
