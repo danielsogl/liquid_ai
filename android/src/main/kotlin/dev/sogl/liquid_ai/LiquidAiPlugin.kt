@@ -29,7 +29,10 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
         generationEventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "liquid_ai/generation")
         generationEventChannel.setStreamHandler(generationProgressHandler)
 
-        modelManager = ModelRunnerManager(progressHandler)
+        modelManager = ModelRunnerManager(
+            progressHandler,
+            flutterPluginBinding.applicationContext
+        )
         conversationManager = ConversationManager(generationProgressHandler, modelManager)
     }
 

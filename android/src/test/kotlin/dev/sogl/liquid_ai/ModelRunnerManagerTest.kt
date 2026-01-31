@@ -1,5 +1,6 @@
 package dev.sogl.liquid_ai
 
+import android.content.Context
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -7,10 +8,12 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ModelRunnerManagerTest {
     private lateinit var progressHandler: DownloadProgressHandler
+    private lateinit var context: Context
     private lateinit var manager: ModelRunnerManager
 
     @Before
@@ -19,7 +22,9 @@ class ModelRunnerManagerTest {
         every { android.os.Looper.getMainLooper() } returns null
 
         progressHandler = mockk(relaxed = true)
-        manager = ModelRunnerManager(progressHandler)
+        context = mockk(relaxed = true)
+        every { context.filesDir } returns File(System.getProperty("java.io.tmpdir"))
+        manager = ModelRunnerManager(progressHandler, context)
     }
 
     @After

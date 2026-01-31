@@ -3,17 +3,55 @@ package dev.sogl.liquid_ai
 import ai.liquid.leap.ModelRunner
 import ai.liquid.leap.manifest.LeapDownloader
 import ai.liquid.leap.manifest.LeapDownloaderConfig
+import android.content.Context
 import kotlinx.coroutines.*
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /// Manages model runners and download operations.
-class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
+class ModelRunnerManager(
+    private val progressHandler: DownloadProgressHandler,
+    private val context: Context
+) {
     private val runners = ConcurrentHashMap<String, ModelRunner>()
     private val activeTasks = ConcurrentHashMap<String, Job>()
     private val cancelledOperations = ConcurrentHashMap.newKeySet<String>()
-    private val downloader = LeapDownloader(LeapDownloaderConfig())
+
+    // Use an absolute path for model storage that we control
+    private val modelStorageDir = java.io.File(context.filesDir, "leap_models")
+    private val downloader = LeapDownloader(
+        LeapDownloaderConfig(saveDir = modelStorageDir.absolutePath)
+    )
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /// Recursively deletes a directory and all its contents.
+    private fun deleteDirectoryRecursively(file: java.io.File): Boolean {
+        if (file.isDirectory) {
+            file.listFiles()?.forEach { child ->
+                deleteDirectoryRecursively(child)
+            }
+        }
+        return file.delete()
+    }
+
+    /// Cleans up any partial download for a model.
+    /// This directly deletes the model folder to avoid "Path already exist" errors.
+    private suspend fun cleanupPartialDownload(model: String, quantization: String) {
+        val folderName = "$model-$quantization"
+
+        // Delete from our known storage directory (configured in LeapDownloaderConfig)
+        val modelDir = java.io.File(modelStorageDir, folderName)
+        if (modelDir.exists()) {
+            deleteDirectoryRecursively(modelDir)
+        }
+
+        // Also try SDK's delete method as a fallback
+        try {
+            downloader.deleteModelResources(model, quantization)
+        } catch (_: Exception) {
+            // Ignore - folder might not exist or SDK method failed
+        }
+    }
 
     // MARK: - Download Only
 
@@ -33,14 +71,40 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
 
         val job = scope.launch {
             try {
-                // Use positional parameters: modelName, quantizationSlug, progressCallback
+                // Clean up any existing partial downloads before starting
+                // This prevents "Path already exist" errors from kotlinx.io
+                if (!isModelDownloaded(model, quantization)) {
+                    cleanupPartialDownload(model, quantization)
+                }
+
+                // Track bytes and time for speed calculation
+                var lastBytes = 0L
+                var lastTime = System.currentTimeMillis()
+                var lastSpeed = 0L
+
                 downloader.downloadModel(model, quantization) { progressData ->
                     if (!cancelledOperations.contains(operationId)) {
+                        val currentTime = System.currentTimeMillis()
+                        val currentBytes = progressData.bytes
+                        val elapsedMs = currentTime - lastTime
+
+                        // Only recalculate speed if enough time has passed (100ms minimum)
+                        val speed = if (elapsedMs >= 100) {
+                            val newSpeed = ((currentBytes - lastBytes) * 1000L) / elapsedMs
+                            lastBytes = currentBytes
+                            lastTime = currentTime
+                            lastSpeed = newSpeed
+                            newSpeed
+                        } else {
+                            lastSpeed // Keep previous speed
+                        }
+
                         progressHandler.sendProgress(
                             operationId = operationId,
                             type = OperationType.DOWNLOAD,
                             status = OperationStatus.PROGRESS,
-                            progress = progressData.progress.toDouble()
+                            progress = progressData.progress.toDouble(),
+                            speed = speed
                         )
                     }
                 }
@@ -91,14 +155,40 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
 
         val job = scope.launch {
             try {
-                // Use positional parameters: modelName, quantizationSlug, ..., progressCallback
+                // Clean up any existing partial downloads before starting
+                // This prevents "Path already exist" errors from kotlinx.io
+                if (!isModelDownloaded(model, quantization)) {
+                    cleanupPartialDownload(model, quantization)
+                }
+
+                // Track bytes and time for speed calculation
+                var lastBytes = 0L
+                var lastTime = System.currentTimeMillis()
+                var lastSpeed = 0L
+
                 val runner = downloader.loadModel(model, quantization) { progressData ->
                     if (!cancelledOperations.contains(operationId)) {
+                        val currentTime = System.currentTimeMillis()
+                        val currentBytes = progressData.bytes
+                        val elapsedMs = currentTime - lastTime
+
+                        // Only recalculate speed if enough time has passed (100ms minimum)
+                        val speed = if (elapsedMs >= 100) {
+                            val newSpeed = ((currentBytes - lastBytes) * 1000L) / elapsedMs
+                            lastBytes = currentBytes
+                            lastTime = currentTime
+                            lastSpeed = newSpeed
+                            newSpeed
+                        } else {
+                            lastSpeed // Keep previous speed
+                        }
+
                         progressHandler.sendProgress(
                             operationId = operationId,
                             type = OperationType.LOAD,
                             status = OperationStatus.PROGRESS,
-                            progress = progressData.progress.toDouble()
+                            progress = progressData.progress.toDouble(),
+                            speed = speed
                         )
                     }
                 }
@@ -162,9 +252,11 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
 
     /// Checks if a model is already downloaded.
     fun isModelDownloaded(model: String, quantization: String): Boolean {
-        // Check if the cached manifest exists
-        val cachedPath = downloader.getCachedFilePath(model, quantization, "manifest.yaml")
-        return cachedPath != null && java.io.File(cachedPath).exists()
+        // Check directly for the manifest file at the known path
+        // Path pattern: {filesDir}/leap_models/{model}-{quantization}/{model}-{quantization}.json
+        val folderName = "$model-$quantization"
+        val manifestFile = java.io.File(modelStorageDir, "$folderName/$folderName.json")
+        return manifestFile.exists()
     }
 
     /// Gets the download status of a model.
