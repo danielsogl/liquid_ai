@@ -8,6 +8,8 @@ import ai.liquid.leap.message.ChatMessageContent
 import ai.liquid.leap.message.MessageResponse
 import ai.liquid.leap.message.GenerationFinishReason
 import ai.liquid.leap.function.LeapFunction
+import ai.liquid.leap.function.LeapFunctionParameter
+import ai.liquid.leap.function.LeapFunctionParameterType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
@@ -127,19 +129,17 @@ class ConversationManager(
         val state = conversations[conversationId]
             ?: throw ConversationException("Conversation not found: $conversationId")
 
-        val userMessage = parseChatMessage(message)
+        val flutterMessage = parseChatMessage(message)
             ?: throw ConversationException("Invalid message format")
 
         val generationId = UUID.randomUUID().toString()
         cancelledGenerations.remove(generationId)
 
-        // Add user message to history
-        state.history.add(userMessage)
+        // Add message to our history tracking
+        state.history.add(flutterMessage)
 
-        // Extract text content from user message
-        val userText = userMessage.content
-            .filter { it.type == "text" }
-            .joinToString(" ") { it.value }
+        // Create SDK ChatMessage with proper role
+        val sdkMessage = createSdkChatMessage(flutterMessage)
 
         val job = scope.launch {
             try {
@@ -151,8 +151,8 @@ class ConversationManager(
                 // Parse generation options from Flutter
                 val generationOptions = parseGenerationOptions(options)
 
-                // Use SDK's conversation.generateResponse with text input and options
-                state.conversation.generateResponse(userText, generationOptions)
+                // Use SDK's conversation.generateResponse with proper ChatMessage
+                state.conversation.generateResponse(sdkMessage, generationOptions)
                     .onEach { response ->
                         if (cancelledGenerations.contains(generationId)) {
                             progressHandler.sendCancelled(generationId)
@@ -168,6 +168,16 @@ class ConversationManager(
                             }
                             is MessageResponse.ReasoningChunk -> {
                                 progressHandler.sendReasoningChunk(generationId, response.reasoning)
+                            }
+                            is MessageResponse.FunctionCalls -> {
+                                val serializedCalls = response.functionCalls.mapIndexed { index, call ->
+                                    mapOf(
+                                        "id" to "call_$index",
+                                        "name" to call.name,
+                                        "arguments" to call.arguments
+                                    )
+                                }
+                                progressHandler.sendFunctionCalls(generationId, serializedCalls)
                             }
                             is MessageResponse.Complete -> {
                                 isComplete = true
@@ -242,17 +252,41 @@ class ConversationManager(
     // MARK: - Function Calling
 
     /// Registers a function for a conversation.
+    @Suppress("UNCHECKED_CAST")
     fun registerFunction(
         conversationId: String,
         function: Map<String, Any>
     ) {
-        conversations[conversationId]
+        val state = conversations[conversationId]
             ?: throw ConversationException("Conversation not found: $conversationId")
 
-        // Function calling would be implemented when SDK supports it
+        // Parse the function definition from Flutter
+        val name = function["name"] as? String
+            ?: throw ConversationException("Function name is required")
+        val description = function["description"] as? String
+            ?: throw ConversationException("Function description is required")
+        val parameters = function["parameters"] as? Map<String, Any>
+            ?: throw ConversationException("Function parameters are required")
+
+        // Parse parameters schema into LeapFunctionParameter list
+        val leapParameters = parseParameters(parameters)
+
+        // Create LeapFunction and register with conversation
+        val leapFunction = LeapFunction(
+            name = name,
+            description = description,
+            parameters = leapParameters
+        )
+
+        state.conversation.registerFunction(leapFunction)
+
+        android.util.Log.d("LiquidAI", "Registered function: $name with ${leapParameters.size} parameters")
     }
 
     /// Provides a function result back to the conversation.
+    ///
+    /// This adds the function result as a user message to the conversation
+    /// history so the model can continue the conversation with the result.
     fun provideFunctionResult(
         conversationId: String,
         result: Map<String, Any>
@@ -260,14 +294,18 @@ class ConversationManager(
         val state = conversations[conversationId]
             ?: throw ConversationException("Conversation not found: $conversationId")
 
-        val callId = result["callId"] as? String ?: return
-        val resultText = result["result"] as? String ?: return
+        val callId = result["callId"] as? String
+            ?: throw ConversationException("Call ID is required")
+        val resultText = result["result"] as? String
+            ?: throw ConversationException("Result text is required")
 
-        // Add function result as a user message
+        // Add function result as a user message so the model can process it
         state.history.add(ChatMessageData(
             role = "user",
             content = listOf(ContentData("text", "Function call $callId result: $resultText"))
         ))
+
+        android.util.Log.d("LiquidAI", "Provided function result for call: $callId")
     }
 
     /// Cleans up resources.
@@ -308,7 +346,94 @@ class ConversationManager(
         }
     }
 
+    // MARK: - Function Parameter Parsing
+
+    /// Parses a JSON Schema parameters object into LeapFunctionParameter list.
+    @Suppress("UNCHECKED_CAST")
+    private fun parseParameters(schema: Map<String, Any>): List<LeapFunctionParameter> {
+        val properties = schema["properties"] as? Map<String, Map<String, Any>>
+            ?: return emptyList()
+
+        val requiredFields = (schema["required"] as? List<String>) ?: emptyList()
+
+        return properties.mapNotNull { (name, propertySchema) ->
+            val typeString = propertySchema["type"] as? String ?: return@mapNotNull null
+            val description = propertySchema["description"] as? String ?: ""
+            val isOptional = !requiredFields.contains(name)
+
+            val parameterType = parseParameterType(typeString, propertySchema)
+
+            LeapFunctionParameter(
+                name = name,
+                type = parameterType,
+                description = description,
+                optional = isOptional
+            )
+        }
+    }
+
+    /// Parses a JSON Schema type into LeapFunctionParameterType.
+    @Suppress("UNCHECKED_CAST")
+    private fun parseParameterType(
+        typeString: String,
+        schema: Map<String, Any>
+    ): LeapFunctionParameterType {
+        val enumValues = schema["enum"] as? List<String>
+
+        return when (typeString) {
+            "string" -> LeapFunctionParameterType.String(enumValues = enumValues)
+            "number" -> LeapFunctionParameterType.Number()
+            "integer" -> LeapFunctionParameterType.Integer()
+            "boolean" -> LeapFunctionParameterType.Boolean()
+            "array" -> {
+                // Parse array item type if available
+                val itemsSchema = schema["items"] as? Map<String, Any>
+                val itemType = itemsSchema?.get("type") as? String
+                if (itemType != null && itemsSchema != null) {
+                    val itemParamType = parseParameterType(itemType, itemsSchema)
+                    LeapFunctionParameterType.Array(itemType = itemParamType)
+                } else {
+                    LeapFunctionParameterType.Array(itemType = LeapFunctionParameterType.String())
+                }
+            }
+            "object" -> {
+                // Parse nested object properties
+                val nestedProps = schema["properties"] as? Map<String, Map<String, Any>>
+                if (nestedProps != null) {
+                    val properties = nestedProps.mapNotNull { (propName, propSchema) ->
+                        val propType = propSchema["type"] as? String ?: return@mapNotNull null
+                        propName to parseParameterType(propType, propSchema)
+                    }.toMap()
+                    val required = (schema["required"] as? List<String>) ?: emptyList()
+                    LeapFunctionParameterType.Object(properties = properties, required = required)
+                } else {
+                    LeapFunctionParameterType.Object(properties = emptyMap(), required = emptyList())
+                }
+            }
+            else -> LeapFunctionParameterType.String()
+        }
+    }
+
     // MARK: - Private Helpers
+
+    /// Creates an SDK ChatMessage from our internal ChatMessageData.
+    private fun createSdkChatMessage(message: ChatMessageData): ChatMessage {
+        // Extract text content
+        val textContent = message.content
+            .filter { it.type == "text" }
+            .joinToString(" ") { it.value }
+
+        // Map role string to SDK role enum
+        val role = when (message.role) {
+            "system" -> ChatMessage.Role.SYSTEM
+            "user" -> ChatMessage.Role.USER
+            "assistant" -> ChatMessage.Role.ASSISTANT
+            "tool" -> ChatMessage.Role.TOOL
+            else -> ChatMessage.Role.USER
+        }
+
+        return ChatMessage(role = role, textContent = textContent)
+    }
 
     private fun parseChatMessage(map: Map<String, Any>): ChatMessageData? {
         val roleString = map["role"] as? String ?: return null

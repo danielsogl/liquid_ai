@@ -215,6 +215,39 @@ class GenerationCancelledEvent extends GenerationEvent {
   String toString() => 'GenerationCancelledEvent(generationId: $generationId)';
 }
 
+/// Event containing the result of a tool execution.
+///
+/// This event is emitted by [Conversation.generateWithTools] after a tool
+/// handler executes successfully. It allows the UI to display tool results.
+class GenerationToolResultEvent extends GenerationEvent {
+  /// Creates a new [GenerationToolResultEvent].
+  const GenerationToolResultEvent({
+    required this.generationId,
+    required this.functionName,
+    required this.arguments,
+    required this.result,
+  });
+
+  @override
+  final String generationId;
+
+  /// The name of the function that was called.
+  final String functionName;
+
+  /// The arguments passed to the function.
+  final Map<String, dynamic> arguments;
+
+  /// The result returned by the function.
+  final String result;
+
+  @override
+  String toString() =>
+      'GenerationToolResultEvent('
+      'generationId: $generationId, '
+      'functionName: $functionName, '
+      'result: $result)';
+}
+
 GenerationFinishReason _parseFinishReason(String reason) {
   switch (reason) {
     case 'endOfSequence':

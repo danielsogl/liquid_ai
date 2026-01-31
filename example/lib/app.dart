@@ -4,6 +4,7 @@ import 'screens/chat_screen.dart';
 import 'screens/models_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/structured_demo_screen.dart';
+import 'screens/tools_screen.dart';
 
 /// Main app widget with bottom navigation.
 class LiquidAiExampleApp extends StatefulWidget {
@@ -19,6 +20,7 @@ class _LiquidAiExampleAppState extends State<LiquidAiExampleApp> {
   static const _screens = [
     ModelsScreen(),
     ChatScreen(),
+    ToolsScreen(),
     StructuredDemoScreen(),
     SettingsScreen(),
   ];
@@ -57,6 +59,11 @@ class _LiquidAiExampleAppState extends State<LiquidAiExampleApp> {
               icon: Icon(Icons.chat_outlined),
               selectedIcon: Icon(Icons.chat),
               label: 'Chat',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.build_outlined),
+              selectedIcon: Icon(Icons.build),
+              label: 'Tools',
             ),
             NavigationDestination(
               icon: Icon(Icons.data_object_outlined),

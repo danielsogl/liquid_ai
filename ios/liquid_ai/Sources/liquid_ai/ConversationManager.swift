@@ -261,15 +261,36 @@ actor ConversationManager {
         conversationId: String,
         function: [String: Any]
     ) throws {
-        guard conversations[conversationId] != nil else {
+        guard let state = conversations[conversationId] else {
             throw ConversationError.conversationNotFound(conversationId)
         }
 
-        // Function calling support would be implemented here
-        // when the LEAP SDK adds function calling capabilities
+        // Parse the function definition from Flutter
+        guard let name = function["name"] as? String,
+              let description = function["description"] as? String,
+              let parametersSchema = function["parameters"] as? [String: Any] else {
+            throw ConversationError.invalidMessage
+        }
+
+        // Parse parameters schema into LeapFunctionParameter array
+        let leapParameters = Self.parseParameters(parametersSchema)
+
+        // Create LeapFunction and register with conversation
+        let leapFunction = LeapFunction(
+            name: name,
+            description: description,
+            parameters: leapParameters
+        )
+
+        state.conversation.registerFunction(leapFunction)
+
+        print("[LiquidAI] Registered function: \(name) with \(leapParameters.count) parameters")
     }
 
     /// Provides a function result back to the conversation.
+    ///
+    /// This adds the function result as a user message to the conversation
+    /// history so the model can continue the conversation with the result.
     func provideFunctionResult(
         conversationId: String,
         result: [String: Any]
@@ -278,15 +299,86 @@ actor ConversationManager {
             throw ConversationError.conversationNotFound(conversationId)
         }
 
-        if let callId = result["callId"] as? String,
-           let resultText = result["result"] as? String {
-            // Add function result as a message
-            let message = ChatMessage(
-                role: .user,
-                content: [.text("Function call \(callId) result: \(resultText)")]
+        guard let callId = result["callId"] as? String,
+              let resultText = result["result"] as? String else {
+            throw ConversationError.invalidMessage
+        }
+
+        // Add function result as a user message so the model can process it
+        let message = ChatMessage(
+            role: .user,
+            content: [.text("Function call \(callId) result: \(resultText)")]
+        )
+        state.history.append(message)
+        conversations[conversationId] = state
+
+        print("[LiquidAI] Provided function result for call: \(callId)")
+    }
+
+    // MARK: - Function Parameter Parsing
+
+    /// Parses a JSON Schema parameters object into LeapFunctionParameter array.
+    static func parseParameters(_ schema: [String: Any]) -> [LeapFunctionParameter] {
+        guard let properties = schema["properties"] as? [String: [String: Any]] else {
+            return []
+        }
+
+        let requiredFields = (schema["required"] as? [String]) ?? []
+
+        return properties.compactMap { (name, propertySchema) -> LeapFunctionParameter? in
+            guard let typeString = propertySchema["type"] as? String else {
+                return nil
+            }
+
+            let parameterType = parseParameterType(typeString, schema: propertySchema)
+            let description = propertySchema["description"] as? String ?? ""
+            let isOptional = !requiredFields.contains(name)
+
+            return LeapFunctionParameter(
+                name: name,
+                type: parameterType,
+                description: description,
+                optional: isOptional
             )
-            state.history.append(message)
-            conversations[conversationId] = state
+        }
+    }
+
+    /// Parses a JSON Schema type into LeapFunctionParameterType.
+    static func parseParameterType(_ typeString: String, schema: [String: Any]) -> LeapFunctionParameterType {
+        let enumValues = schema["enum"] as? [String]
+
+        switch typeString {
+        case "string":
+            return .string(StringType(enumValues: enumValues))
+        case "number":
+            return .number(NumberType())
+        case "integer":
+            return .integer(IntegerType())
+        case "boolean":
+            return .boolean(BooleanType())
+        case "array":
+            // Parse array item type if available
+            if let itemsSchema = schema["items"] as? [String: Any],
+               let itemType = itemsSchema["type"] as? String {
+                let itemParamType = parseParameterType(itemType, schema: itemsSchema)
+                return .array(ArrayType(itemType: itemParamType))
+            }
+            return .array(ArrayType(itemType: .string(StringType())))
+        case "object":
+            // Parse nested object properties
+            if let nestedProps = schema["properties"] as? [String: [String: Any]] {
+                var properties: [String: LeapFunctionParameterType] = [:]
+                for (propName, propSchema) in nestedProps {
+                    if let propType = propSchema["type"] as? String {
+                        properties[propName] = parseParameterType(propType, schema: propSchema)
+                    }
+                }
+                let required = schema["required"] as? [String] ?? []
+                return .object(ObjectType(properties: properties, required: required))
+            }
+            return .object(ObjectType(properties: [:], required: []))
+        default:
+            return .string(StringType())
         }
     }
 
@@ -361,6 +453,7 @@ actor ConversationManager {
         case "system": role = .system
         case "user": role = .user
         case "assistant": role = .assistant
+        case "tool": role = .tool
         default: return nil
         }
 
@@ -396,6 +489,7 @@ actor ConversationManager {
         case .system: roleString = "system"
         case .user: roleString = "user"
         case .assistant: roleString = "assistant"
+        case .tool: roleString = "tool"
         @unknown default: roleString = "user"
         }
 

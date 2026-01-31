@@ -6,10 +6,11 @@ import 'package:liquid_ai/liquid_ai.dart';
 void main() {
   group('ChatMessageRole', () {
     test('has correct values', () {
-      expect(ChatMessageRole.values, hasLength(3));
+      expect(ChatMessageRole.values, hasLength(4));
       expect(ChatMessageRole.system.name, 'system');
       expect(ChatMessageRole.user.name, 'user');
       expect(ChatMessageRole.assistant.name, 'assistant');
+      expect(ChatMessageRole.tool.name, 'tool');
     });
   });
 
@@ -182,6 +183,12 @@ void main() {
       final message = ChatMessage.assistant('Hi there!');
       expect(message.role, ChatMessageRole.assistant);
       expect(message.text, 'Hi there!');
+    });
+
+    test('creates tool message', () {
+      final message = ChatMessage.tool('{"result": 42}');
+      expect(message.role, ChatMessageRole.tool);
+      expect(message.text, '{"result": 42}');
     });
 
     test('text getter returns first text content', () {

@@ -1,3 +1,5 @@
+import '../schema/json_schema.dart';
+
 /// A function that can be called by the model.
 class LeapFunction {
   /// Creates a new [LeapFunction].
@@ -6,6 +8,34 @@ class LeapFunction {
     required this.description,
     required this.parameters,
   });
+
+  /// Creates a [LeapFunction] with a typed [JsonSchema] for parameters.
+  ///
+  /// This provides a type-safe, fluent API for defining function parameters:
+  ///
+  /// ```dart
+  /// LeapFunction.withSchema(
+  ///   name: 'get_weather',
+  ///   description: 'Get the current weather for a location',
+  ///   schema: JsonSchema.object('Weather parameters')
+  ///       .addString('location', 'The city name')
+  ///       .addString('unit', 'Temperature unit',
+  ///           required: false,
+  ///           enumValues: ['celsius', 'fahrenheit'])
+  ///       .build(),
+  /// )
+  /// ```
+  factory LeapFunction.withSchema({
+    required String name,
+    required String description,
+    required JsonSchema schema,
+  }) {
+    return LeapFunction(
+      name: name,
+      description: description,
+      parameters: schema.toMap(),
+    );
+  }
 
   /// Creates a [LeapFunction] from a JSON map.
   factory LeapFunction.fromMap(Map<String, dynamic> map) {

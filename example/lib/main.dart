@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'state/chat_state.dart';
 import 'state/download_state.dart';
+import 'state/tools_state.dart';
 
 void main() {
   runApp(
@@ -11,6 +12,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => DownloadState()..initialize()),
         ChangeNotifierProvider(create: (_) => ChatState()),
+        ChangeNotifierProvider(create: (_) => ToolsState()),
       ],
       child: const LiquidAiExampleApp(),
     ),

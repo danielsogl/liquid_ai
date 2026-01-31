@@ -10,6 +10,12 @@ enum ChatMessageRole {
 
   /// A message from the assistant.
   assistant,
+
+  /// A tool/function result message.
+  ///
+  /// Use this role to send function execution results back to the model
+  /// after receiving a [GenerationFunctionCallEvent].
+  tool,
 }
 
 /// Base class for chat message content.
@@ -163,6 +169,31 @@ class ChatMessage {
     return ChatMessage(
       role: ChatMessageRole.assistant,
       content: [TextContent(text: text)],
+    );
+  }
+
+  /// Creates a tool result message.
+  ///
+  /// Use this to send function execution results back to the model after
+  /// receiving a [GenerationFunctionCallEvent]. Call [Conversation.generateResponse]
+  /// with this message to continue the conversation.
+  ///
+  /// Example:
+  /// ```dart
+  /// case GenerationFunctionCallEvent(:final functionCalls):
+  ///   for (final call in functionCalls) {
+  ///     final result = await executeFunction(call);
+  ///     final toolMessage = ChatMessage.tool(result);
+  ///     // Continue generation with the tool result
+  ///     await for (final event in conversation.generateResponse(toolMessage)) {
+  ///       // Handle response...
+  ///     }
+  ///   }
+  /// ```
+  factory ChatMessage.tool(String result) {
+    return ChatMessage(
+      role: ChatMessageRole.tool,
+      content: [TextContent(text: result)],
     );
   }
 
