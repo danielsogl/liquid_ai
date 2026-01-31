@@ -157,18 +157,6 @@ const List<LeapModel> leapModelCatalog = [
     updatedAt: '2026-01-15',
   ),
   LeapModel(
-    slug: 'LFM2.5-1.2B-Base',
-    name: 'LFM2.5-1.2B Base',
-    description:
-        'Base model for finetuning or custom checkpoints. '
-        'Pre-trained without instruction tuning.',
-    parameters: '1.2B',
-    modalities: [ModelModality.text],
-    quantizations: _standardQuantizations,
-    contextLength: 4096,
-    updatedAt: '2026-01-15',
-  ),
-  LeapModel(
     slug: 'LFM2.5-1.2B-JP',
     name: 'LFM2.5-1.2B Japanese',
     description:
