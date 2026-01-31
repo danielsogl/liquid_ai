@@ -15,7 +15,7 @@ class LiquidAi {
   ///
   /// Optionally accepts a [platform] for testing purposes.
   LiquidAi({LiquidAiPlatform? platform})
-      : _platform = platform ?? LiquidAiPlatform.instance;
+    : _platform = platform ?? LiquidAiPlatform.instance;
 
   final LiquidAiPlatform _platform;
 
@@ -121,8 +121,12 @@ class LiquidAi {
         subscription = _platform.progressEvents.listen((event) {
           // Filter events by operationId once we have it
           if (operationId != null && event['operationId'] == operationId) {
-            final eventData =
-                _parseLoadEvent(event, operationId!, model, quantization);
+            final eventData = _parseLoadEvent(
+              event,
+              operationId!,
+              model,
+              quantization,
+            );
             if (eventData != null) {
               safeAdd(eventData);
               if (eventData is LoadCompleteEvent ||

@@ -61,10 +61,7 @@ enum ModelQuantization {
 /// Information about a specific quantization variant.
 class QuantizationInfo {
   /// Creates a new [QuantizationInfo].
-  const QuantizationInfo({
-    required this.quantization,
-    this.sizeBytes,
-  });
+  const QuantizationInfo({required this.quantization, this.sizeBytes});
 
   /// The quantization type.
   final ModelQuantization quantization;

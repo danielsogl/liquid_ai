@@ -4,10 +4,7 @@ import 'package:liquid_ai/liquid_ai.dart';
 void main() {
   group('DownloadProgress', () {
     test('creates with required fields', () {
-      const progress = DownloadProgress(
-        operationId: 'op_1',
-        progress: 0.5,
-      );
+      const progress = DownloadProgress(operationId: 'op_1', progress: 0.5);
 
       expect(progress.operationId, 'op_1');
       expect(progress.progress, 0.5);
@@ -33,10 +30,7 @@ void main() {
     });
 
     test('calculates progressPercent correctly', () {
-      const progress = DownloadProgress(
-        operationId: 'op_1',
-        progress: 0.756,
-      );
+      const progress = DownloadProgress(operationId: 'op_1', progress: 0.756);
 
       expect(progress.progressPercent, 76);
     });
@@ -98,10 +92,7 @@ void main() {
     });
 
     test('toMap excludes null fields', () {
-      const progress = DownloadProgress(
-        operationId: 'op_1',
-        progress: 0.5,
-      );
+      const progress = DownloadProgress(operationId: 'op_1', progress: 0.5);
 
       final map = progress.toMap();
 
@@ -124,10 +115,7 @@ void main() {
     });
 
     test('toString handles null speed', () {
-      const progress = DownloadProgress(
-        operationId: 'op_1',
-        progress: 0.5,
-      );
+      const progress = DownloadProgress(operationId: 'op_1', progress: 0.5);
 
       expect(
         progress.toString(),

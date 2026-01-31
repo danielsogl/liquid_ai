@@ -4,12 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:liquid_ai/liquid_ai.dart';
 
 /// Status of a single model's download.
-enum ModelDownloadStatus {
-  notDownloaded,
-  downloading,
-  downloaded,
-  error,
-}
+enum ModelDownloadStatus { notDownloaded, downloading, downloaded, error }
+
+/// Status of loading a model into memory.
+enum ModelLoadStatus { notLoaded, loading, loaded, error }
 
 /// State for a single model.
 class ModelState {
@@ -63,6 +61,15 @@ class DownloadState extends ChangeNotifier {
 
   bool _isDownloadingAll = false;
 
+  /// The currently loading model slug.
+  String? _loadingModelSlug;
+
+  /// The current load status.
+  ModelLoadStatus _loadStatus = ModelLoadStatus.notLoaded;
+
+  /// Error message if load failed.
+  String? _loadErrorMessage;
+
   /// The list of available models.
   List<LeapModel> get models => ModelCatalog.available;
 
@@ -75,6 +82,18 @@ class DownloadState extends ChangeNotifier {
       (state) => state.status == ModelDownloadStatus.downloading,
     );
   }
+
+  /// The slug of the model currently being loaded.
+  String? get loadingModelSlug => _loadingModelSlug;
+
+  /// The current load status.
+  ModelLoadStatus get loadStatus => _loadStatus;
+
+  /// Error message if load failed.
+  String? get loadErrorMessage => _loadErrorMessage;
+
+  /// Whether a model is currently being loaded.
+  bool get isLoading => _loadStatus == ModelLoadStatus.loading;
 
   /// Gets the state for a specific model.
   ModelState getModelState(String modelSlug) {
@@ -124,8 +143,7 @@ class DownloadState extends ChangeNotifier {
 
     _modelStates[model.slug] = ModelState(
       status: ModelDownloadStatus.downloading,
-      downloadedQuantization:
-          _modelStates[model.slug]?.downloadedQuantization,
+      downloadedQuantization: _modelStates[model.slug]?.downloadedQuantization,
     );
     notifyListeners();
 
@@ -190,8 +208,7 @@ class DownloadState extends ChangeNotifier {
 
     _modelStates[model.slug] = ModelState(
       status: ModelDownloadStatus.downloading,
-      downloadedQuantization:
-          _modelStates[model.slug]?.downloadedQuantization,
+      downloadedQuantization: _modelStates[model.slug]?.downloadedQuantization,
     );
     notifyListeners();
 
@@ -308,6 +325,75 @@ class DownloadState extends ChangeNotifier {
       status: ModelDownloadStatus.notDownloaded,
     );
     notifyListeners();
+  }
+
+  /// Loads a model into memory and returns a [ModelRunner].
+  ///
+  /// This is used to get a runner that can be used for inference.
+  Future<ModelRunner?> loadModel(String modelSlug, String quantization) async {
+    if (_loadStatus == ModelLoadStatus.loading) {
+      return null;
+    }
+
+    _loadingModelSlug = modelSlug;
+    _loadStatus = ModelLoadStatus.loading;
+    _loadErrorMessage = null;
+    notifyListeners();
+
+    final completer = Completer<ModelRunner?>();
+
+    final stream = _liquidAi.loadModel(modelSlug, quantization);
+    StreamSubscription<LoadEvent>? subscription;
+
+    subscription = stream.listen(
+      (event) {
+        switch (event) {
+          case LoadStartedEvent():
+            // Already set loading status
+            break;
+          case LoadProgressEvent():
+            // Could track progress here if needed
+            break;
+          case LoadCompleteEvent():
+            _loadStatus = ModelLoadStatus.loaded;
+            _loadingModelSlug = null;
+            notifyListeners();
+            if (!completer.isCompleted) {
+              completer.complete(event.runner);
+            }
+            subscription?.cancel();
+          case LoadErrorEvent():
+            _loadStatus = ModelLoadStatus.error;
+            _loadErrorMessage = event.error;
+            _loadingModelSlug = null;
+            notifyListeners();
+            if (!completer.isCompleted) {
+              completer.complete(null);
+            }
+            subscription?.cancel();
+          case LoadCancelledEvent():
+            _loadStatus = ModelLoadStatus.notLoaded;
+            _loadingModelSlug = null;
+            notifyListeners();
+            if (!completer.isCompleted) {
+              completer.complete(null);
+            }
+            subscription?.cancel();
+        }
+      },
+      onError: (error) {
+        _loadStatus = ModelLoadStatus.error;
+        _loadErrorMessage = error.toString();
+        _loadingModelSlug = null;
+        notifyListeners();
+        if (!completer.isCompleted) {
+          completer.complete(null);
+        }
+        subscription?.cancel();
+      },
+    );
+
+    return completer.future;
   }
 
   @override

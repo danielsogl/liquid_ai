@@ -18,10 +18,7 @@ class DownloadStartedEvent extends DownloadEvent {
 /// Event indicating download progress.
 class DownloadProgressEvent extends DownloadEvent {
   /// Creates a new [DownloadProgressEvent].
-  DownloadProgressEvent({
-    required this.operationId,
-    required this.progress,
-  });
+  DownloadProgressEvent({required this.operationId, required this.progress});
 
   @override
   final String operationId;
@@ -42,10 +39,7 @@ class DownloadCompleteEvent extends DownloadEvent {
 /// Event indicating download failed.
 class DownloadErrorEvent extends DownloadEvent {
   /// Creates a new [DownloadErrorEvent].
-  DownloadErrorEvent({
-    required this.operationId,
-    required this.error,
-  });
+  DownloadErrorEvent({required this.operationId, required this.error});
 
   @override
   final String operationId;

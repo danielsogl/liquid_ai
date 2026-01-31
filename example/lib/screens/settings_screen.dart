@@ -8,9 +8,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
           const _SectionHeader(title: 'About'),
@@ -45,9 +43,9 @@ class SettingsScreen extends StatelessWidget {
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Models cleared')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Models cleared')));
             },
             child: const Text('Clear'),
           ),
@@ -69,8 +67,8 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -86,9 +84,7 @@ class _AboutTile extends StatelessWidget {
           leading: const Icon(Icons.info_outline),
           title: const Text('Liquid AI Example'),
           subtitle: Text(
-            snapshot.hasData
-                ? 'Platform: ${snapshot.data}'
-                : 'Loading...',
+            snapshot.hasData ? 'Platform: ${snapshot.data}' : 'Loading...',
           ),
         );
       },

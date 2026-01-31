@@ -16,6 +16,9 @@ actor ModelRunnerManager {
     /// The model downloader instance.
     private let downloader = ModelDownloader()
 
+    /// Cached downloaded model manifests keyed by "model/quantization".
+    private var downloadedManifests: [String: DownloadedModelManifest] = [:]
+
     /// Progress handler for streaming events to Flutter.
     private let progressHandler: DownloadProgressHandler
 
@@ -43,7 +46,7 @@ actor ModelRunnerManager {
             guard let self = self else { return }
 
             do {
-                _ = try await self.downloader.downloadModel(
+                let manifest = try await self.downloader.downloadModel(
                     model,
                     quantization: quantization
                 ) { [weak self] progress, speed in
@@ -62,6 +65,10 @@ actor ModelRunnerManager {
                         }
                     }
                 }
+
+                // Store the manifest for later loading
+                let key = "\(model)/\(quantization)"
+                await self.storeManifest(key, manifest: manifest)
 
                 let isCancelled = await self.isOperationCancelled(operationId)
                 if !isCancelled {
@@ -113,24 +120,53 @@ actor ModelRunnerManager {
             guard let self = self else { return }
 
             do {
-                let runner = try await Leap.load(
-                    model: model,
-                    quantization: quantization
-                ) { [weak self] progress, speed in
-                    guard let self = self else { return }
+                let runner: any ModelRunner
 
-                    Task {
-                        let isCancelled = await self.isOperationCancelled(operationId)
-                        if !isCancelled {
-                            self.progressHandler.sendProgress(
-                                operationId: operationId,
-                                type: .load,
-                                status: .progress,
-                                progress: progress,
-                                speed: speed
-                            )
+                // Check if we have a cached manifest from a previous download
+                let key = "\(model)/\(quantization)"
+                var manifest = await self.getManifest(key)
+
+                // If no cached manifest but model is downloaded, try to get it
+                if manifest == nil {
+                    let status = self.downloader.queryStatus(model, quantization: quantization)
+                    if status == .downloaded {
+                        // Re-download will return cached manifest without network request
+                        manifest = try? await self.downloader.downloadModel(
+                            model,
+                            quantization: quantization
+                        ) { _, _ in }
+
+                        if let manifest = manifest {
+                            await self.storeManifest(key, manifest: manifest)
                         }
                     }
+                }
+
+                if let manifest = manifest {
+                    // Load from local URL using the downloaded manifest
+                    runner = try await Leap.load(url: manifest.localModelURL)
+                } else {
+                    // Fall back to downloading and loading via Leap.load
+                    runner = try await Leap.load(
+                        model: model,
+                        quantization: quantization,
+                        downloadProgressHandler: { [weak self] progress, speed in
+                            guard let self = self else { return }
+
+                            Task {
+                                let isCancelled = await self.isOperationCancelled(operationId)
+                                if !isCancelled {
+                                    self.progressHandler.sendProgress(
+                                        operationId: operationId,
+                                        type: .load,
+                                        status: .progress,
+                                        progress: progress,
+                                        speed: speed
+                                    )
+                                }
+                            }
+                        }
+                    )
                 }
 
                 let isCancelled = await self.isOperationCancelled(operationId)
@@ -155,11 +191,19 @@ actor ModelRunnerManager {
             } catch {
                 let isCancelled = await self.isOperationCancelled(operationId)
                 if !isCancelled {
+                    // Extract more detailed error information
+                    let errorMessage: String
+                    if let leapError = error as? LeapError {
+                        errorMessage = "LEAP Error: \(leapError)"
+                    } else {
+                        errorMessage = "\(error)"
+                    }
+
                     self.progressHandler.sendProgress(
                         operationId: operationId,
                         type: .load,
                         status: .error,
-                        error: error.localizedDescription
+                        error: errorMessage
                     )
                 }
                 await self.removeTask(operationId)
@@ -230,6 +274,14 @@ actor ModelRunnerManager {
 
     private func storeRunner(_ runnerId: String, runner: any ModelRunner) {
         runners[runnerId] = runner
+    }
+
+    private func storeManifest(_ key: String, manifest: DownloadedModelManifest) {
+        downloadedManifests[key] = manifest
+    }
+
+    private func getManifest(_ key: String) -> DownloadedModelManifest? {
+        return downloadedManifests[key]
     }
 
     private func removeTask(_ operationId: String) {

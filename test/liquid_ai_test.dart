@@ -40,8 +40,9 @@ void main() {
             .downloadModel('lfm2-350m', 'q4_k_m')
             .toList();
 
-        final progressEvents =
-            events.whereType<DownloadProgressEvent>().toList();
+        final progressEvents = events
+            .whereType<DownloadProgressEvent>()
+            .toList();
         expect(progressEvents, isNotEmpty);
         expect(progressEvents.last.progress.progress, equals(1.0));
       });
@@ -75,23 +76,20 @@ void main() {
 
     group('loadModel', () {
       test('emits started event first', () async {
-        final events =
-            await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
+        final events = await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
 
         expect(events.first, isA<LoadStartedEvent>());
       });
 
       test('emits progress events during load', () async {
-        final events =
-            await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
+        final events = await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
 
         final progressEvents = events.whereType<LoadProgressEvent>().toList();
         expect(progressEvents, isNotEmpty);
       });
 
       test('emits completed event with runner on success', () async {
-        final events =
-            await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
+        final events = await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
 
         final completeEvent = events.last as LoadCompleteEvent;
         expect(completeEvent.runner, isNotNull);
@@ -103,8 +101,7 @@ void main() {
         mockPlatform.simulateError = true;
         mockPlatform.errorMessage = 'Load failed';
 
-        final events =
-            await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
+        final events = await liquidAi.loadModel('lfm2-350m', 'q4_k_m').toList();
 
         final errorEvent = events.last as LoadErrorEvent;
         expect(errorEvent.error, 'Load failed');
@@ -113,16 +110,20 @@ void main() {
 
     group('isModelDownloaded', () {
       test('returns false for non-downloaded model', () async {
-        final isDownloaded =
-            await liquidAi.isModelDownloaded('lfm2-350m', 'q4_k_m');
+        final isDownloaded = await liquidAi.isModelDownloaded(
+          'lfm2-350m',
+          'q4_k_m',
+        );
         expect(isDownloaded, isFalse);
       });
 
       test('returns true for downloaded model', () async {
         mockPlatform.downloadedModels['lfm2-350m:q4_k_m'] = true;
 
-        final isDownloaded =
-            await liquidAi.isModelDownloaded('lfm2-350m', 'q4_k_m');
+        final isDownloaded = await liquidAi.isModelDownloaded(
+          'lfm2-350m',
+          'q4_k_m',
+        );
         expect(isDownloaded, isTrue);
       });
     });

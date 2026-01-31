@@ -1,8 +1,8 @@
 package dev.sogl.liquid_ai
 
-import ai.liquid.leap.LeapDownloader
-import ai.liquid.leap.LeapDownloaderConfig
 import ai.liquid.leap.ModelRunner
+import ai.liquid.leap.manifest.LeapDownloader
+import ai.liquid.leap.manifest.LeapDownloaderConfig
 import kotlinx.coroutines.*
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -33,17 +33,14 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
 
         val job = scope.launch {
             try {
-                downloader.downloadModel(
-                    modelSlug = model,
-                    quantizationSlug = quantization
-                ) { progressData ->
+                // Use positional parameters: modelName, quantizationSlug, progressCallback
+                downloader.downloadModel(model, quantization) { progressData ->
                     if (!cancelledOperations.contains(operationId)) {
                         progressHandler.sendProgress(
                             operationId = operationId,
                             type = OperationType.DOWNLOAD,
                             status = OperationStatus.PROGRESS,
-                            progress = progressData.fractionCompleted,
-                            speed = progressData.bytesPerSecond
+                            progress = progressData.progress.toDouble()
                         )
                     }
                 }
@@ -94,17 +91,14 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
 
         val job = scope.launch {
             try {
-                val runner = downloader.loadModel(
-                    modelSlug = model,
-                    quantizationSlug = quantization
-                ) { progressData ->
+                // Use positional parameters: modelName, quantizationSlug, ..., progressCallback
+                val runner = downloader.loadModel(model, quantization) { progressData ->
                     if (!cancelledOperations.contains(operationId)) {
                         progressHandler.sendProgress(
                             operationId = operationId,
                             type = OperationType.LOAD,
                             status = OperationStatus.PROGRESS,
-                            progress = progressData.fractionCompleted,
-                            speed = progressData.bytesPerSecond
+                            progress = progressData.progress.toDouble()
                         )
                     }
                 }
@@ -149,7 +143,9 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
     /// Unloads a previously loaded model runner.
     fun unloadModel(runnerId: String): Boolean {
         val runner = runners.remove(runnerId) ?: return false
-        runner.unload()
+        scope.launch {
+            runner.unload()
+        }
         return true
     }
 
@@ -157,12 +153,14 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
 
     /// Checks if a model is already downloaded.
     fun isModelDownloaded(model: String, quantization: String): Boolean {
-        return downloader.isModelDownloaded(model, quantization)
+        // Check if the cached manifest exists
+        val cachedPath = downloader.getCachedFilePath(model, quantization, "manifest.yaml")
+        return cachedPath != null && java.io.File(cachedPath).exists()
     }
 
     /// Gets the download status of a model.
     fun getModelStatus(model: String, quantization: String): Map<String, Any> {
-        val isDownloaded = downloader.isModelDownloaded(model, quantization)
+        val isDownloaded = isModelDownloaded(model, quantization)
         return mapOf(
             "type" to if (isDownloaded) "downloaded" else "notDownloaded",
             "progress" to if (isDownloaded) 1.0 else 0.0
@@ -173,7 +171,9 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
 
     /// Deletes a downloaded model from local storage.
     fun deleteModel(model: String, quantization: String) {
-        downloader.deleteModel(model, quantization)
+        scope.launch {
+            downloader.deleteModelResources(model, quantization)
+        }
     }
 
     // MARK: - Cancel Operation
@@ -202,7 +202,7 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
     /// Cleans up resources.
     fun dispose() {
         scope.cancel()
-        runners.values.forEach { it.unload() }
+        // Note: runners will be cleaned up when scope is cancelled
         runners.clear()
         activeTasks.clear()
         cancelledOperations.clear()

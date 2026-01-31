@@ -48,4 +48,55 @@ abstract class LiquidAiPlatform extends PlatformInterface {
 
   /// Stream of progress events for all operations.
   Stream<Map<String, dynamic>> get progressEvents;
+
+  // ============ Conversation Management ============
+
+  /// Creates a new conversation with the given runner.
+  Future<String> createConversation(String runnerId, {String? systemPrompt});
+
+  /// Creates a conversation from existing message history.
+  Future<String> createConversationFromHistory(
+    String runnerId,
+    List<Map<String, dynamic>> history,
+  );
+
+  /// Gets the message history for a conversation.
+  Future<List<Map<String, dynamic>>> getConversationHistory(
+    String conversationId,
+  );
+
+  /// Disposes of a conversation.
+  Future<void> disposeConversation(String conversationId);
+
+  /// Exports a conversation as JSON.
+  Future<String> exportConversation(String conversationId);
+
+  // ============ Generation ============
+
+  /// Generates a response in a conversation.
+  Future<String> generateResponse(
+    String conversationId,
+    Map<String, dynamic> message, {
+    Map<String, dynamic>? options,
+  });
+
+  /// Stops an ongoing generation.
+  Future<void> stopGeneration(String generationId);
+
+  // ============ Function Calling ============
+
+  /// Registers a function for a conversation.
+  Future<void> registerFunction(
+    String conversationId,
+    Map<String, dynamic> function,
+  );
+
+  /// Provides a function result back to the conversation.
+  Future<void> provideFunctionResult(
+    String conversationId,
+    Map<String, dynamic> result,
+  );
+
+  /// Stream of generation events.
+  Stream<Map<String, dynamic>> get generationEvents;
 }

@@ -26,9 +26,7 @@ class ModelsScreen extends StatelessWidget {
           final models = state.models;
 
           if (models.isEmpty) {
-            return const Center(
-              child: Text('No models available'),
-            );
+            return const Center(child: Text('No models available'));
           }
 
           return RefreshIndicator(

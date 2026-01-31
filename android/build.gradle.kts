@@ -30,6 +30,6 @@ android {
 }
 
 dependencies {
-    implementation("ai.liquid.leap:leap-sdk:0.9.2")
+    implementation("ai.liquid.leap:leap-sdk:0.9.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

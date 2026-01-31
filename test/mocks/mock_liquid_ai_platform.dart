@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:liquid_ai/liquid_ai.dart';
 
@@ -13,14 +14,26 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   /// The progress stream controller.
   late StreamController<Map<String, dynamic>> _progressController;
 
+  /// The generation stream controller.
+  late StreamController<Map<String, dynamic>> _generationController;
+
   /// Cancelled operation IDs.
   final Set<String> _cancelledOperations = {};
+
+  /// Cancelled generation IDs.
+  final Set<String> _cancelledGenerations = {};
 
   /// Counter for generating unique operation IDs.
   int _operationCounter = 0;
 
   /// Counter for generating unique runner IDs.
   int _runnerCounter = 0;
+
+  /// Counter for generating unique conversation IDs.
+  int _conversationCounter = 0;
+
+  /// Counter for generating unique generation IDs.
+  int _generationCounter = 0;
 
   /// Whether to simulate errors.
   bool simulateError = false;
@@ -30,8 +43,18 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
 
   bool _disposed = false;
 
+  /// Stored conversation histories.
+  final Map<String, List<Map<String, dynamic>>> conversationHistory = {};
+
+  /// Registered functions per conversation.
+  final Map<String, List<Map<String, dynamic>>> registeredFunctions = {};
+
+  /// Function results per conversation.
+  final Map<String, List<Map<String, dynamic>>> functionResults = {};
+
   MockLiquidAiPlatform() {
     _progressController = StreamController<Map<String, dynamic>>.broadcast();
+    _generationController = StreamController<Map<String, dynamic>>.broadcast();
   }
 
   @override
@@ -224,13 +247,189 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   @override
   Stream<Map<String, dynamic>> get progressEvents => _progressController.stream;
 
+  @override
+  Stream<Map<String, dynamic>> get generationEvents =>
+      _generationController.stream;
+
+  // ============ Conversation Management ============
+
+  @override
+  Future<String> createConversation(
+    String runnerId, {
+    String? systemPrompt,
+  }) async {
+    if (!runners.containsKey(runnerId)) {
+      throw Exception('Runner not found: $runnerId');
+    }
+
+    final conversationId = 'conv_${++_conversationCounter}';
+    conversationHistory[conversationId] = [];
+
+    if (systemPrompt != null) {
+      conversationHistory[conversationId]!.add({
+        'role': 'system',
+        'content': [
+          {'type': 'text', 'text': systemPrompt},
+        ],
+      });
+    }
+
+    return conversationId;
+  }
+
+  @override
+  Future<String> createConversationFromHistory(
+    String runnerId,
+    List<Map<String, dynamic>> history,
+  ) async {
+    if (!runners.containsKey(runnerId)) {
+      throw Exception('Runner not found: $runnerId');
+    }
+
+    final conversationId = 'conv_${++_conversationCounter}';
+    conversationHistory[conversationId] = List.from(history);
+    return conversationId;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getConversationHistory(
+    String conversationId,
+  ) async {
+    return conversationHistory[conversationId] ?? [];
+  }
+
+  @override
+  Future<void> disposeConversation(String conversationId) async {
+    conversationHistory.remove(conversationId);
+    registeredFunctions.remove(conversationId);
+    functionResults.remove(conversationId);
+  }
+
+  @override
+  Future<String> exportConversation(String conversationId) async {
+    final history = conversationHistory[conversationId] ?? [];
+    return json.encode({'conversationId': conversationId, 'messages': history});
+  }
+
+  // ============ Generation ============
+
+  @override
+  Future<String> generateResponse(
+    String conversationId,
+    Map<String, dynamic> message, {
+    Map<String, dynamic>? options,
+  }) async {
+    final generationId = 'gen_${++_generationCounter}';
+    _cancelledGenerations.remove(generationId);
+
+    // Add user message to history
+    conversationHistory[conversationId]?.add(message);
+
+    // Schedule generation events
+    unawaited(_emitGenerationEvents(conversationId, generationId));
+
+    return generationId;
+  }
+
+  Future<void> _emitGenerationEvents(
+    String conversationId,
+    String generationId,
+  ) async {
+    await Future.delayed(Duration.zero);
+
+    if (_cancelledGenerations.contains(generationId)) return;
+
+    if (simulateError) {
+      _safeAddGeneration({
+        'generationId': generationId,
+        'type': 'error',
+        'error': errorMessage,
+      });
+      return;
+    }
+
+    // Send chunks
+    final chunks = ['Hello', ' ', 'World', '!'];
+    for (final chunk in chunks) {
+      if (_cancelledGenerations.contains(generationId)) {
+        _safeAddGeneration({'generationId': generationId, 'type': 'cancelled'});
+        return;
+      }
+
+      _safeAddGeneration({
+        'generationId': generationId,
+        'type': 'chunk',
+        'chunk': chunk,
+      });
+      await Future.delayed(const Duration(milliseconds: 1));
+    }
+
+    if (_cancelledGenerations.contains(generationId)) return;
+
+    // Send complete
+    final responseMessage = {
+      'role': 'assistant',
+      'content': [
+        {'type': 'text', 'text': 'Hello World!'},
+      ],
+    };
+
+    conversationHistory[conversationId]?.add(responseMessage);
+
+    _safeAddGeneration({
+      'generationId': generationId,
+      'type': 'complete',
+      'message': responseMessage,
+      'finishReason': 'endOfSequence',
+      'stats': {'tokenCount': 4, 'tokensPerSecond': 100.0},
+    });
+  }
+
+  @override
+  Future<void> stopGeneration(String generationId) async {
+    _cancelledGenerations.add(generationId);
+    _safeAddGeneration({'generationId': generationId, 'type': 'cancelled'});
+  }
+
+  // ============ Function Calling ============
+
+  @override
+  Future<void> registerFunction(
+    String conversationId,
+    Map<String, dynamic> function,
+  ) async {
+    registeredFunctions.putIfAbsent(conversationId, () => []);
+    registeredFunctions[conversationId]!.add(function);
+  }
+
+  @override
+  Future<void> provideFunctionResult(
+    String conversationId,
+    Map<String, dynamic> result,
+  ) async {
+    functionResults.putIfAbsent(conversationId, () => []);
+    functionResults[conversationId]!.add(result);
+  }
+
+  void _safeAddGeneration(Map<String, dynamic> event) {
+    if (!_disposed && !_generationController.isClosed) {
+      _generationController.add(event);
+    }
+  }
+
   /// Resets the mock state.
   void reset() {
     downloadedModels.clear();
     runners.clear();
     _cancelledOperations.clear();
+    _cancelledGenerations.clear();
+    conversationHistory.clear();
+    registeredFunctions.clear();
+    functionResults.clear();
     _operationCounter = 0;
     _runnerCounter = 0;
+    _conversationCounter = 0;
+    _generationCounter = 0;
     simulateError = false;
     errorMessage = 'Simulated error';
   }
@@ -239,6 +438,7 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   void dispose() {
     _disposed = true;
     _progressController.close();
+    _generationController.close();
   }
 }
 

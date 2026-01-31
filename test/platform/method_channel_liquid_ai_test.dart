@@ -15,40 +15,36 @@ void main() {
       log.clear();
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('liquid_ai'),
-        (MethodCall methodCall) async {
-          log.add(methodCall);
-          switch (methodCall.method) {
-            case 'getPlatformVersion':
-              return 'Mock 1.0';
-            case 'downloadModel':
-              return 'op_1';
-            case 'loadModel':
-              return 'op_2';
-            case 'unloadModel':
-              return true;
-            case 'isModelDownloaded':
-              return true;
-            case 'deleteModel':
-              return null;
-            case 'cancelOperation':
-              return null;
-            case 'getModelStatus':
-              return {'type': 'downloaded', 'progress': 1.0};
-            default:
-              return null;
-          }
-        },
-      );
+          .setMockMethodCallHandler(const MethodChannel('liquid_ai'), (
+            MethodCall methodCall,
+          ) async {
+            log.add(methodCall);
+            switch (methodCall.method) {
+              case 'getPlatformVersion':
+                return 'Mock 1.0';
+              case 'downloadModel':
+                return 'op_1';
+              case 'loadModel':
+                return 'op_2';
+              case 'unloadModel':
+                return true;
+              case 'isModelDownloaded':
+                return true;
+              case 'deleteModel':
+                return null;
+              case 'cancelOperation':
+                return null;
+              case 'getModelStatus':
+                return {'type': 'downloaded', 'progress': 1.0};
+              default:
+                return null;
+            }
+          });
     });
 
     tearDown(() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('liquid_ai'),
-        null,
-      );
+          .setMockMethodCallHandler(const MethodChannel('liquid_ai'), null);
     });
 
     test('getPlatformVersion returns platform version', () async {
@@ -88,8 +84,10 @@ void main() {
     });
 
     test('isModelDownloaded calls method with correct arguments', () async {
-      final isDownloaded =
-          await platform.isModelDownloaded('lfm2-350m', 'q4_k_m');
+      final isDownloaded = await platform.isModelDownloaded(
+        'lfm2-350m',
+        'q4_k_m',
+      );
 
       expect(isDownloaded, isTrue);
       expect(log.last.method, 'isModelDownloaded');
@@ -130,12 +128,11 @@ void main() {
 
     test('unloadModel returns false when null response', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('liquid_ai'),
-        (MethodCall methodCall) async {
-          return null;
-        },
-      );
+          .setMockMethodCallHandler(const MethodChannel('liquid_ai'), (
+            MethodCall methodCall,
+          ) async {
+            return null;
+          });
 
       final success = await platform.unloadModel('runner_1');
       expect(success, isFalse);
@@ -143,26 +140,26 @@ void main() {
 
     test('isModelDownloaded returns false when null response', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('liquid_ai'),
-        (MethodCall methodCall) async {
-          return null;
-        },
-      );
+          .setMockMethodCallHandler(const MethodChannel('liquid_ai'), (
+            MethodCall methodCall,
+          ) async {
+            return null;
+          });
 
-      final isDownloaded =
-          await platform.isModelDownloaded('lfm2-350m', 'q4_k_m');
+      final isDownloaded = await platform.isModelDownloaded(
+        'lfm2-350m',
+        'q4_k_m',
+      );
       expect(isDownloaded, isFalse);
     });
 
     test('getModelStatus returns default when null response', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('liquid_ai'),
-        (MethodCall methodCall) async {
-          return null;
-        },
-      );
+          .setMockMethodCallHandler(const MethodChannel('liquid_ai'), (
+            MethodCall methodCall,
+          ) async {
+            return null;
+          });
 
       final status = await platform.getModelStatus('lfm2-350m', 'q4_k_m');
       expect(status.type, ModelStatusType.notDownloaded);

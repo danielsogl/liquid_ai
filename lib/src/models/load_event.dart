@@ -19,10 +19,7 @@ class LoadStartedEvent extends LoadEvent {
 /// Event indicating load progress.
 class LoadProgressEvent extends LoadEvent {
   /// Creates a new [LoadProgressEvent].
-  LoadProgressEvent({
-    required this.operationId,
-    required this.progress,
-  });
+  LoadProgressEvent({required this.operationId, required this.progress});
 
   @override
   final String operationId;
@@ -34,10 +31,7 @@ class LoadProgressEvent extends LoadEvent {
 /// Event indicating load completed successfully.
 class LoadCompleteEvent extends LoadEvent {
   /// Creates a new [LoadCompleteEvent].
-  LoadCompleteEvent({
-    required this.operationId,
-    required this.runner,
-  });
+  LoadCompleteEvent({required this.operationId, required this.runner});
 
   @override
   final String operationId;
@@ -49,10 +43,7 @@ class LoadCompleteEvent extends LoadEvent {
 /// Event indicating load failed.
 class LoadErrorEvent extends LoadEvent {
   /// Creates a new [LoadErrorEvent].
-  LoadErrorEvent({
-    required this.operationId,
-    required this.error,
-  });
+  LoadErrorEvent({required this.operationId, required this.error});
 
   @override
   final String operationId;

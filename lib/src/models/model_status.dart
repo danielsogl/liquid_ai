@@ -13,10 +13,7 @@ enum ModelStatusType {
 /// Status information for a model.
 class ModelStatus {
   /// Creates a new [ModelStatus].
-  const ModelStatus({
-    required this.type,
-    this.progress = 0.0,
-  });
+  const ModelStatus({required this.type, this.progress = 0.0});
 
   /// Creates a [ModelStatus] from a map.
   factory ModelStatus.fromMap(Map<String, dynamic> map) {
@@ -46,10 +43,7 @@ class ModelStatus {
 
   /// Converts this status to a map.
   Map<String, dynamic> toMap() {
-    return {
-      'type': type.name,
-      'progress': progress,
-    };
+    return {'type': type.name, 'progress': progress};
   }
 
   @override

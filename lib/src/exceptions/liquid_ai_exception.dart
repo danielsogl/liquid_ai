@@ -10,7 +10,8 @@ class LiquidAiException implements Exception {
   final String? code;
 
   @override
-  String toString() => 'LiquidAiException: $message${code != null ? ' ($code)' : ''}';
+  String toString() =>
+      'LiquidAiException: $message${code != null ? ' ($code)' : ''}';
 }
 
 /// Exception thrown when a download operation fails.

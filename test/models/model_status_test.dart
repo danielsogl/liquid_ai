@@ -71,27 +71,19 @@ void main() {
     });
 
     test('fromMap handles unknown type as notDownloaded', () {
-      final status = ModelStatus.fromMap({
-        'type': 'unknown',
-        'progress': 0.0,
-      });
+      final status = ModelStatus.fromMap({'type': 'unknown', 'progress': 0.0});
 
       expect(status.type, ModelStatusType.notDownloaded);
     });
 
     test('fromMap handles missing progress', () {
-      final status = ModelStatus.fromMap({
-        'type': 'downloaded',
-      });
+      final status = ModelStatus.fromMap({'type': 'downloaded'});
 
       expect(status.progress, 0.0);
     });
 
     test('fromMap handles integer progress', () {
-      final status = ModelStatus.fromMap({
-        'type': 'downloaded',
-        'progress': 1,
-      });
+      final status = ModelStatus.fromMap({'type': 'downloaded', 'progress': 1});
 
       expect(status.progress, 1.0);
     });

@@ -6,10 +6,7 @@ import '../state/download_state.dart';
 
 /// List item displaying a model with download controls.
 class ModelListItem extends StatelessWidget {
-  const ModelListItem({
-    super.key,
-    required this.model,
-  });
+  const ModelListItem({super.key, required this.model});
 
   final LeapModel model;
 
@@ -34,8 +31,7 @@ class ModelListItem extends StatelessWidget {
                   _buildDescription(context),
                   const SizedBox(height: 8),
                   _buildChips(context, modelState),
-                  if (modelState.status ==
-                      ModelDownloadStatus.downloading) ...[
+                  if (modelState.status == ModelDownloadStatus.downloading) ...[
                     const SizedBox(height: 12),
                     _buildProgressIndicator(context, modelState),
                   ],
@@ -66,8 +62,8 @@ class ModelListItem extends StatelessWidget {
                   Text(
                     model.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (model.isDeprecated) ...[
                     const SizedBox(width: 8),
@@ -83,10 +79,8 @@ class ModelListItem extends StatelessWidget {
                       child: Text(
                         'Deprecated',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onErrorContainer,
-                            ),
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
                       ),
                     ),
                   ],
@@ -96,8 +90,8 @@ class ModelListItem extends StatelessWidget {
               Text(
                 '${model.parameters} parameters',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -173,11 +167,11 @@ class ModelListItem extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: isPrimary
-                      ? Theme.of(context).colorScheme.onPrimaryContainer
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: isPrimary ? FontWeight.bold : null,
-                ),
+              color: isPrimary
+                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: isPrimary ? FontWeight.bold : null,
+            ),
           ),
         ],
       ),
@@ -189,8 +183,9 @@ class ModelListItem extends StatelessWidget {
       children: [
         LinearProgressIndicator(
           value: modelState.progress,
-          backgroundColor:
-              Theme.of(context).colorScheme.surfaceContainerHighest,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest,
         ),
         const SizedBox(height: 8),
         Row(
@@ -214,8 +209,8 @@ class ModelListItem extends StatelessWidget {
     return Text(
       modelState.errorMessage ?? 'Download failed',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.error,
-          ),
+        color: Theme.of(context).colorScheme.error,
+      ),
     );
   }
 
@@ -236,10 +231,7 @@ class ModelListItem extends StatelessWidget {
           ),
         );
       case ModelDownloadStatus.error:
-        return Icon(
-          Icons.error,
-          color: Theme.of(context).colorScheme.error,
-        );
+        return Icon(Icons.error, color: Theme.of(context).colorScheme.error);
       case ModelDownloadStatus.notDownloaded:
         return Icon(
           Icons.cloud_download_outlined,
@@ -265,7 +257,8 @@ class ModelListItem extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             IconButton.outlined(
-              onPressed: () => _showQuantizationPicker(context, state, modelState),
+              onPressed: () =>
+                  _showQuantizationPicker(context, state, modelState),
               icon: const Icon(Icons.tune),
               tooltip: 'Choose quantization',
             ),
@@ -287,7 +280,8 @@ class ModelListItem extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             OutlinedButton.icon(
-              onPressed: () => _showQuantizationPicker(context, state, modelState),
+              onPressed: () =>
+                  _showQuantizationPicker(context, state, modelState),
               icon: const Icon(Icons.swap_horiz),
               label: const Text('Switch'),
             ),
@@ -317,7 +311,9 @@ class ModelListItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isDownloaded ? 'Switch Quantization' : 'Select Quantization',
+                    isDownloaded
+                        ? 'Switch Quantization'
+                        : 'Select Quantization',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   if (isDownloaded) ...[
@@ -325,9 +321,8 @@ class ModelListItem extends StatelessWidget {
                     Text(
                       'Currently downloaded: ${downloadedQuant?.slug ?? "None"}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ],
@@ -336,8 +331,7 @@ class ModelListItem extends StatelessWidget {
             const Divider(height: 1),
             ...model.quantizations.map((q) {
               final isDefault = q == model.defaultQuantization;
-              final isCurrentlyDownloaded =
-                  downloadedQuant?.slug == q.slug;
+              final isCurrentlyDownloaded = downloadedQuant?.slug == q.slug;
 
               return ListTile(
                 leading: Icon(
@@ -347,14 +341,13 @@ class ModelListItem extends StatelessWidget {
                   color: isCurrentlyDownloaded
                       ? Theme.of(context).colorScheme.primary
                       : (isDefault
-                          ? Theme.of(context).colorScheme.secondary
-                          : null),
+                            ? Theme.of(context).colorScheme.secondary
+                            : null),
                 ),
                 title: Text(
                   q.slug,
                   style: TextStyle(
-                    fontWeight:
-                        isCurrentlyDownloaded ? FontWeight.bold : null,
+                    fontWeight: isCurrentlyDownloaded ? FontWeight.bold : null,
                   ),
                 ),
                 subtitle: Text(_getQuantizationDescription(q.quantization)),
@@ -366,12 +359,12 @@ class ModelListItem extends StatelessWidget {
                         padding: const EdgeInsets.only(right: 8),
                         child: Text(
                           'Recommended',
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       ),
                     if (isCurrentlyDownloaded)
@@ -472,23 +465,20 @@ class ModelListItem extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  quant,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                Text(quant, style: Theme.of(context).textTheme.titleSmall),
                 Text(
                   description,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -568,8 +558,7 @@ class ModelListItem extends StatelessWidget {
                         width: 32,
                         height: 4,
                         decoration: BoxDecoration(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -583,8 +572,9 @@ class ModelListItem extends StatelessWidget {
                       const SizedBox(height: 8),
                       Chip(
                         label: const Text('Deprecated'),
-                        backgroundColor:
-                            Theme.of(context).colorScheme.errorContainer,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.errorContainer,
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -628,9 +618,8 @@ class ModelListItem extends StatelessWidget {
                           ? 'Tap another quantization to switch.'
                           : 'Tap a quantization to download.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     ...model.quantizations.map((q) {
@@ -643,9 +632,9 @@ class ModelListItem extends StatelessWidget {
                         child: Material(
                           color: isCurrentlyDownloaded
                               ? Theme.of(context).colorScheme.primaryContainer
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
@@ -695,8 +684,8 @@ class ModelListItem extends StatelessWidget {
                                                   ?.copyWith(
                                                     fontWeight:
                                                         isCurrentlyDownloaded
-                                                            ? FontWeight.bold
-                                                            : null,
+                                                        ? FontWeight.bold
+                                                        : null,
                                                   ),
                                             ),
                                             if (isDefault) ...[
@@ -704,9 +693,9 @@ class ModelListItem extends StatelessWidget {
                                               Icon(
                                                 Icons.star,
                                                 size: 16,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .secondary,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.secondary,
                                               ),
                                             ],
                                           ],
@@ -719,9 +708,9 @@ class ModelListItem extends StatelessWidget {
                                               .textTheme
                                               .bodySmall
                                               ?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurfaceVariant,
                                               ),
                                         ),
                                       ],
@@ -734,9 +723,9 @@ class ModelListItem extends StatelessWidget {
                                           .textTheme
                                           .labelMedium
                                           ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                           ),
                                     )
                                   else if (!isDownloading)
@@ -744,9 +733,9 @@ class ModelListItem extends StatelessWidget {
                                       downloadedQuant != null
                                           ? Icons.swap_horiz
                                           : Icons.download,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                     ),
                                 ],
                               ),
@@ -776,15 +765,12 @@ class ModelListItem extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),

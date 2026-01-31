@@ -5,8 +5,14 @@ export 'src/liquid_ai.dart';
 export 'src/platform/liquid_ai_platform_interface.dart';
 
 // Models
+export 'src/models/chat_message.dart';
+export 'src/models/conversation.dart';
 export 'src/models/download_event.dart';
 export 'src/models/download_progress.dart';
+export 'src/models/generation_event.dart';
+export 'src/models/generation_options.dart';
+export 'src/models/generation_stats.dart';
+export 'src/models/leap_function.dart';
 export 'src/models/leap_model.dart';
 export 'src/models/load_event.dart';
 export 'src/models/model_catalog.dart';
