@@ -403,6 +403,25 @@ actor ConversationManager {
         activeGenerations.removeValue(forKey: generationId)
     }
 
+    // MARK: - Token Counting
+
+    /// Gets the token count for the current conversation history.
+    ///
+    /// This is useful for budgeting tokens before generation.
+    /// Only available for LiquidInferenceEngine runners.
+    func getTokenCount(conversationId: String) throws -> Int {
+        guard let state = conversations[conversationId] else {
+            throw ConversationError.conversationNotFound(conversationId)
+        }
+
+        // Token counting requires LiquidInferenceEngineRunner
+        guard let runner = state.conversation.modelRunner as? LiquidInferenceEngineRunner else {
+            throw ConversationError.generationFailed("Token counting not supported for this model type")
+        }
+
+        return try runner.getPromptTokensSize(messages: state.history, addBosToken: true)
+    }
+
     // MARK: - Generation Options Parsing
 
     /// Parses Flutter generation options into LeapSDK GenerationOptions.
@@ -435,6 +454,24 @@ actor ConversationManager {
         if let jsonSchema = options["jsonSchemaConstraint"] as? String {
             print("[LiquidAI] Setting jsonSchemaConstraint: \(jsonSchema.prefix(200))...")
             genOptions.jsonSchemaConstraint = jsonSchema
+        }
+
+        // Function call parser configuration
+        if let parserType = options["functionCallParser"] as? String {
+            switch parserType {
+            case "hermes":
+                genOptions.functionCallParser = HermesFunctionCallParser()
+                print("[LiquidAI] Using HermesFunctionCallParser")
+            case "raw", "none":
+                genOptions.functionCallParser = nil
+                print("[LiquidAI] Using raw function call output (no parser)")
+            case "lfm", "default":
+                genOptions.functionCallParser = LFMFunctionCallParser()
+                print("[LiquidAI] Using LFMFunctionCallParser")
+            default:
+                // Keep default parser
+                break
+            }
         }
 
         return genOptions

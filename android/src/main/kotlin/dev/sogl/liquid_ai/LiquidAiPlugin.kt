@@ -57,6 +57,8 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             // Function Calling
             "registerFunction" -> handleRegisterFunction(call, result)
             "provideFunctionResult" -> handleProvideFunctionResult(call, result)
+            // Token Counting
+            "getTokenCount" -> handleGetTokenCount(call, result)
             else -> result.notImplemented()
         }
     }
@@ -458,5 +460,16 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
                 null
             )
         }
+    }
+
+    // MARK: - Token Counting
+
+    private fun handleGetTokenCount(call: MethodCall, result: Result) {
+        // Token counting API is not available on Android SDK
+        result.error(
+            "UNSUPPORTED",
+            "Token counting is not supported on Android. This feature is only available on iOS.",
+            null
+        )
     }
 }

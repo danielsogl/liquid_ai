@@ -7,6 +7,8 @@ import ai.liquid.leap.message.MessageResponse
 import ai.liquid.leap.function.LeapFunction
 import ai.liquid.leap.function.LeapFunctionParameter
 import ai.liquid.leap.function.LeapFunctionParameterType
+import ai.liquid.leap.function.HermesFunctionCallParser
+import ai.liquid.leap.function.LFMFunctionCallParser
 import ai.liquid.leap.gson.registerLeapAdapters
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.*
@@ -339,6 +341,24 @@ class ConversationManager(
             (options["jsonSchemaConstraint"] as? String)?.let { schema ->
                 android.util.Log.d("LiquidAI", "Setting jsonSchemaConstraint: ${schema.take(200)}...")
                 jsonSchemaConstraint = schema
+            }
+            // Function call parser configuration
+            (options["functionCallParser"] as? String)?.let { parserType ->
+                functionCallParser = when (parserType) {
+                    "hermes" -> {
+                        android.util.Log.d("LiquidAI", "Using HermesFunctionCallParser")
+                        HermesFunctionCallParser()
+                    }
+                    "raw", "none" -> {
+                        android.util.Log.d("LiquidAI", "Using raw function call output (no parser)")
+                        null
+                    }
+                    "lfm", "default" -> {
+                        android.util.Log.d("LiquidAI", "Using LFMFunctionCallParser")
+                        LFMFunctionCallParser()
+                    }
+                    else -> null // Keep default
+                }
             }
         }
     }

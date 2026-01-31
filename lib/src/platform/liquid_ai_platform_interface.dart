@@ -97,6 +97,15 @@ abstract class LiquidAiPlatform extends PlatformInterface {
     Map<String, dynamic> result,
   );
 
+  // ============ Token Counting ============
+
+  /// Gets the token count for the current conversation history.
+  ///
+  /// This is useful for budgeting tokens before generation.
+  /// Note: This feature is only available on iOS. On Android, this will
+  /// throw an [UnsupportedError].
+  Future<int> getTokenCount(String conversationId);
+
   /// Stream of generation events.
   Stream<Map<String, dynamic>> get generationEvents;
 }

@@ -89,6 +89,10 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         case "provideFunctionResult":
             handleProvideFunctionResult(call, result: result)
 
+        // Token Counting
+        case "getTokenCount":
+            handleGetTokenCount(call, result: result)
+
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -523,6 +527,37 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
                 DispatchQueue.main.async {
                     result(FlutterError(
                         code: "FUNCTION_RESULT_FAILED",
+                        message: error.localizedDescription,
+                        details: nil
+                    ))
+                }
+            }
+        }
+    }
+
+    // MARK: - Token Counting
+
+    private func handleGetTokenCount(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let conversationId = args["conversationId"] as? String else {
+            result(FlutterError(
+                code: "INVALID_ARGUMENTS",
+                message: "Missing required argument: conversationId",
+                details: nil
+            ))
+            return
+        }
+
+        Task {
+            do {
+                let tokenCount = try await conversationManager.getTokenCount(conversationId: conversationId)
+                DispatchQueue.main.async {
+                    result(tokenCount)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    result(FlutterError(
+                        code: "TOKEN_COUNT_FAILED",
                         message: error.localizedDescription,
                         details: nil
                     ))

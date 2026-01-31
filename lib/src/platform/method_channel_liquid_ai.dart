@@ -196,6 +196,16 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
     });
   }
 
+  // ============ Token Counting ============
+
+  @override
+  Future<int> getTokenCount(String conversationId) async {
+    final tokenCount = await methodChannel.invokeMethod<int>('getTokenCount', {
+      'conversationId': conversationId,
+    });
+    return tokenCount!;
+  }
+
   @override
   Stream<Map<String, dynamic>> get generationEvents {
     _generationStream ??= generationEventChannel.receiveBroadcastStream().map(

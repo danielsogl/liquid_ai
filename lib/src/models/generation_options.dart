@@ -1,5 +1,17 @@
 import '../schema/json_schema.dart';
 
+/// The type of function call parser to use for parsing model outputs.
+enum FunctionCallParser {
+  /// Liquid Foundation Model parser (default for LFM2 models).
+  lfm,
+
+  /// Hermes/Qwen3 format parser.
+  hermes,
+
+  /// Raw output without parsing (receive raw tool-call text in chunks).
+  raw,
+}
+
 /// Options for text generation.
 class GenerationOptions {
   /// Creates new [GenerationOptions].
@@ -10,10 +22,20 @@ class GenerationOptions {
     this.repetitionPenalty,
     this.maxTokens,
     this.jsonSchemaConstraint,
+    this.functionCallParser,
   });
 
   /// Creates [GenerationOptions] from a JSON map.
   factory GenerationOptions.fromMap(Map<String, dynamic> map) {
+    FunctionCallParser? parser;
+    final parserStr = map['functionCallParser'] as String?;
+    if (parserStr != null) {
+      parser = FunctionCallParser.values.firstWhere(
+        (e) => e.name == parserStr,
+        orElse: () => FunctionCallParser.lfm,
+      );
+    }
+
     return GenerationOptions(
       temperature: map['temperature'] as double?,
       topP: map['topP'] as double?,
@@ -21,6 +43,7 @@ class GenerationOptions {
       repetitionPenalty: map['repetitionPenalty'] as double?,
       maxTokens: map['maxTokens'] as int?,
       jsonSchemaConstraint: map['jsonSchemaConstraint'] as String?,
+      functionCallParser: parser,
     );
   }
 
@@ -42,6 +65,13 @@ class GenerationOptions {
   /// JSON schema to constrain output format.
   final String? jsonSchemaConstraint;
 
+  /// The function call parser to use for parsing tool calls.
+  ///
+  /// - [FunctionCallParser.lfm]: Default for Liquid Foundation Models (LFM2).
+  /// - [FunctionCallParser.hermes]: Use for Hermes/Qwen3 format models.
+  /// - [FunctionCallParser.raw]: Receive raw tool-call text without parsing.
+  final FunctionCallParser? functionCallParser;
+
   /// Converts this options to a JSON map.
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{};
@@ -52,6 +82,9 @@ class GenerationOptions {
     if (maxTokens != null) map['maxTokens'] = maxTokens;
     if (jsonSchemaConstraint != null) {
       map['jsonSchemaConstraint'] = jsonSchemaConstraint;
+    }
+    if (functionCallParser != null) {
+      map['functionCallParser'] = functionCallParser!.name;
     }
     return map;
   }
@@ -64,6 +97,7 @@ class GenerationOptions {
     double? repetitionPenalty,
     int? maxTokens,
     String? jsonSchemaConstraint,
+    FunctionCallParser? functionCallParser,
   }) {
     return GenerationOptions(
       temperature: temperature ?? this.temperature,
@@ -72,6 +106,7 @@ class GenerationOptions {
       repetitionPenalty: repetitionPenalty ?? this.repetitionPenalty,
       maxTokens: maxTokens ?? this.maxTokens,
       jsonSchemaConstraint: jsonSchemaConstraint ?? this.jsonSchemaConstraint,
+      functionCallParser: functionCallParser ?? this.functionCallParser,
     );
   }
 
@@ -102,7 +137,8 @@ class GenerationOptions {
           minP == other.minP &&
           repetitionPenalty == other.repetitionPenalty &&
           maxTokens == other.maxTokens &&
-          jsonSchemaConstraint == other.jsonSchemaConstraint;
+          jsonSchemaConstraint == other.jsonSchemaConstraint &&
+          functionCallParser == other.functionCallParser;
 
   @override
   int get hashCode => Object.hash(
@@ -112,6 +148,7 @@ class GenerationOptions {
     repetitionPenalty,
     maxTokens,
     jsonSchemaConstraint,
+    functionCallParser,
   );
 
   @override
@@ -122,5 +159,6 @@ class GenerationOptions {
       'minP: $minP, '
       'repetitionPenalty: $repetitionPenalty, '
       'maxTokens: $maxTokens, '
-      'jsonSchemaConstraint: $jsonSchemaConstraint)';
+      'jsonSchemaConstraint: $jsonSchemaConstraint, '
+      'functionCallParser: $functionCallParser)';
 }

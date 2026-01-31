@@ -411,6 +411,15 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
     functionResults[conversationId]!.add(result);
   }
 
+  // ============ Token Counting ============
+
+  @override
+  Future<int> getTokenCount(String conversationId) async {
+    final history = conversationHistory[conversationId] ?? [];
+    // Simple mock: estimate 4 tokens per message
+    return history.length * 4;
+  }
+
   void _safeAddGeneration(Map<String, dynamic> event) {
     if (!_disposed && !_generationController.isClosed) {
       _generationController.add(event);

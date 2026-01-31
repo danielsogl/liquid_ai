@@ -295,6 +295,26 @@ class Conversation {
     await _platform.provideFunctionResult(conversationId, result.toMap());
   }
 
+  /// Gets the token count for the current conversation history.
+  ///
+  /// This is useful for budgeting tokens before generation to ensure
+  /// the prompt doesn't exceed the model's context window.
+  ///
+  /// Note: This feature is only available on iOS. On Android, this will
+  /// throw a [PlatformException] with code 'UNSUPPORTED'.
+  ///
+  /// Example:
+  /// ```dart
+  /// final tokens = await conversation.getTokenCount();
+  /// if (tokens > 4000) {
+  ///   print('Warning: Conversation is getting long!');
+  /// }
+  /// ```
+  Future<int> getTokenCount() async {
+    _checkDisposed();
+    return _platform.getTokenCount(conversationId);
+  }
+
   /// Exports the conversation as a JSON string.
   Future<String> export() async {
     _checkDisposed();
