@@ -272,8 +272,8 @@ class ToolsState extends ChangeNotifier {
   ///
   /// Flow:
   /// 1. Execute each function
-  /// 2. Provide results back to conversation history
-  /// 3. Send continuation message to get natural language response
+  /// 2. Add tool result to conversation history
+  /// 3. Generate response without function calling constraint
   Future<void> _processFunctionCalls(List<LeapFunctionCall> calls) async {
     final results = <String>[];
 
@@ -302,25 +302,81 @@ class ToolsState extends ChangeNotifier {
       );
       notifyListeners();
 
-      // Provide result back to conversation history
+      // Add tool result to conversation history
       await _conversation!.provideFunctionResult(
         LeapFunctionResult(callId: call.id, result: result),
       );
 
-      results.add('${call.name} returned: $result');
+      results.add('${call.name}: $result');
     }
 
-    // Send continuation message to get natural language response
-    // Using user message with explicit instructions to avoid another tool call
-    final resultsText = results.join('\n');
-    final continuationMessage = ChatMessage.user(
-      'The tool returned the following results:\n$resultsText\n\n'
-      'Please provide a helpful response to the user based on these results.',
-    );
+    // Create a new conversation from history WITHOUT function registration
+    // This avoids the tool call constraint being applied
+    final history = await _conversation!.getHistory();
+    await _conversation!.dispose();
+    _conversation = await _runner!.createConversationFromHistory(history);
 
-    // Continue generation - _generateWithFunctionHandling will add the
-    // assistant placeholder since this is a user message
-    await _generateWithFunctionHandling(continuationMessage);
+    // Note: We intentionally do NOT re-register functions here
+    // so the model can generate a natural language response
+
+    // Add assistant placeholder
+    _messages.add(
+      const ToolsMessageUI(
+        type: ToolsMessageType.assistant,
+        content: '',
+        isStreaming: true,
+      ),
+    );
+    notifyListeners();
+
+    // Generate natural language response
+    final prompt = 'Based on the tool results, provide a helpful response.';
+    final buffer = StringBuffer();
+
+    try {
+      await for (final event in _conversation!.generateResponse(
+        ChatMessage.user(prompt),
+      )) {
+        switch (event) {
+          case GenerationChunkEvent():
+            buffer.write(event.chunk);
+            _updateLastMessage(buffer.toString(), isStreaming: true);
+
+          case GenerationCompleteEvent():
+            final responseText = event.message.text ?? buffer.toString();
+            _updateLastMessage(
+              responseText,
+              isStreaming: false,
+              stats: event.stats,
+            );
+
+            // Re-register functions for future tool calls
+            for (final function in _demoFunctions) {
+              await _conversation!.registerFunction(function);
+            }
+
+            _isGenerating = false;
+            notifyListeners();
+
+          case GenerationErrorEvent():
+            _updateLastMessage('Error: ${event.error}', isStreaming: false);
+            _isGenerating = false;
+            notifyListeners();
+
+          case GenerationCancelledEvent():
+            _updateLastMessage(buffer.toString(), isStreaming: false);
+            _isGenerating = false;
+            notifyListeners();
+
+          default:
+            break;
+        }
+      }
+    } catch (e) {
+      _updateLastMessage('Error: $e', isStreaming: false);
+      _isGenerating = false;
+      notifyListeners();
+    }
   }
 
   /// Executes a demo function and returns the result.

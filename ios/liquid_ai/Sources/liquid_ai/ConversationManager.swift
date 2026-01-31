@@ -289,7 +289,7 @@ actor ConversationManager {
 
     /// Provides a function result back to the conversation.
     ///
-    /// This adds the function result as a user message to the conversation
+    /// This adds the function result as a tool message to the conversation
     /// history so the model can continue the conversation with the result.
     func provideFunctionResult(
         conversationId: String,
@@ -304,10 +304,10 @@ actor ConversationManager {
             throw ConversationError.invalidMessage
         }
 
-        // Add function result as a user message so the model can process it
+        // Add function result as a tool message
         let message = ChatMessage(
-            role: .user,
-            content: [.text("Function call \(callId) result: \(resultText)")]
+            role: .tool,
+            content: [.text(resultText)]
         )
         state.history.append(message)
         conversations[conversationId] = state

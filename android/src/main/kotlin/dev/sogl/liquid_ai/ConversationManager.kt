@@ -284,7 +284,7 @@ class ConversationManager(
 
     /// Provides a function result back to the conversation.
     ///
-    /// This adds the function result as a user message to the conversation
+    /// This adds the function result as a tool message to the conversation
     /// history so the model can continue the conversation with the result.
     fun provideFunctionResult(
         conversationId: String,
@@ -298,10 +298,10 @@ class ConversationManager(
         val resultText = result["result"] as? String
             ?: throw ConversationException("Result text is required")
 
-        // Add function result as a user message so the model can process it
+        // Add function result as a tool message
         state.history.add(ChatMessage(
-            role = ChatMessage.Role.USER,
-            textContent = "Function call $callId result: $resultText"
+            role = ChatMessage.Role.TOOL,
+            textContent = resultText
         ))
 
         android.util.Log.d("LiquidAI", "Provided function result for call: $callId")
