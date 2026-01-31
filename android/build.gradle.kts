@@ -13,10 +13,11 @@ repositories {
 
 android {
     namespace = "dev.sogl.liquid_ai"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 31
+        targetSdk = 36
     }
 
     compileOptions {
@@ -24,13 +25,26 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
 dependencies {
     implementation("ai.liquid.leap:leap-sdk:0.9.6")
-    implementation("ai.liquid.leap:leap_gson:0.2.0")
+    implementation("ai.liquid.leap:leap-gson:0.2.0")
+    implementation("com.google.code.gson:gson:2.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Test dependencies
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.9")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("app.cash.turbine:turbine:1.0.0")
 }

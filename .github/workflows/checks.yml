@@ -54,3 +54,70 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+  android-tests:
+    name: Android Native Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Get example dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Run Android unit tests
+        working-directory: example/android
+        run: ./gradlew :liquid_ai:testDebugUnitTest
+
+  ios-tests:
+    name: iOS Native Tests
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Get example dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Build iOS example (generates Xcode project)
+        working-directory: example
+        run: flutter build ios --simulator --no-codesign
+
+      - name: Install CocoaPods dependencies
+        working-directory: example/ios
+        run: pod install
+
+      - name: List available simulators (debug)
+        run: xcrun simctl list devices
+
+      - name: Run iOS native unit tests
+        working-directory: example/ios
+        run: |
+          xcodebuild test \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -only-testing:RunnerTests \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.0' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color && exit ${PIPESTATUS[0]}

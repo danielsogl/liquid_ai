@@ -3,12 +3,9 @@ package dev.sogl.liquid_ai
 import ai.liquid.leap.Conversation
 import ai.liquid.leap.GenerationOptions
 import ai.liquid.leap.message.ChatMessage
+import ai.liquid.leap.message.ChatMessageContent
 import ai.liquid.leap.message.MessageResponse
-import ai.liquid.leap.function.LeapFunction
-import ai.liquid.leap.function.LeapFunctionParameter
-import ai.liquid.leap.function.LeapFunctionParameterType
-import ai.liquid.leap.function.HermesFunctionCallParser
-import ai.liquid.leap.function.LFMFunctionCallParser
+import ai.liquid.leap.function.*
 import ai.liquid.leap.gson.registerLeapAdapters
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.*
@@ -334,9 +331,10 @@ class ConversationManager(
             (options["repetitionPenalty"] as? Double)?.let {
                 repetitionPenalty = it.toFloat()
             }
-            (options["maxTokens"] as? Int)?.let {
-                maxOutputTokens = it.toUInt()
-            }
+            // maxOutputTokens not available in current SDK version
+            // (options["maxTokens"] as? Int)?.let {
+            //     maxOutputTokens = it.toUInt()
+            // }
             // JSON schema constraint for structured output
             (options["jsonSchemaConstraint"] as? String)?.let { schema ->
                 android.util.Log.d("LiquidAI", "Setting jsonSchemaConstraint: ${schema.take(200)}...")
@@ -398,19 +396,19 @@ class ConversationManager(
         val enumValues = schema["enum"] as? List<String>
 
         return when (typeString) {
-            "string" -> LeapFunctionParameterType.String(enumValues = enumValues)
-            "number" -> LeapFunctionParameterType.Number()
-            "integer" -> LeapFunctionParameterType.Integer()
-            "boolean" -> LeapFunctionParameterType.Boolean()
+            "string" -> LeapFunctionParameterType.LeapStr(enumValues = enumValues)
+            "number" -> LeapFunctionParameterType.LeapNum()
+            "integer" -> LeapFunctionParameterType.LeapInt()
+            "boolean" -> LeapFunctionParameterType.LeapBool()
             "array" -> {
                 // Parse array item type if available
                 val itemsSchema = schema["items"] as? Map<String, Any>
                 val itemType = itemsSchema?.get("type") as? String
                 if (itemType != null && itemsSchema != null) {
                     val itemParamType = parseParameterType(itemType, itemsSchema)
-                    LeapFunctionParameterType.Array(itemType = itemParamType)
+                    LeapFunctionParameterType.LeapArr(itemType = itemParamType)
                 } else {
-                    LeapFunctionParameterType.Array(itemType = LeapFunctionParameterType.String())
+                    LeapFunctionParameterType.LeapArr(itemType = LeapFunctionParameterType.LeapStr())
                 }
             }
             "object" -> {
@@ -422,12 +420,12 @@ class ConversationManager(
                         propName to parseParameterType(propType, propSchema)
                     }.toMap()
                     val required = (schema["required"] as? List<String>) ?: emptyList()
-                    LeapFunctionParameterType.Object(properties = properties, required = required)
+                    LeapFunctionParameterType.LeapObj(properties = properties, required = required)
                 } else {
-                    LeapFunctionParameterType.Object(properties = emptyMap(), required = emptyList())
+                    LeapFunctionParameterType.LeapObj(properties = emptyMap(), required = emptyList())
                 }
             }
-            else -> LeapFunctionParameterType.String()
+            else -> LeapFunctionParameterType.LeapStr()
         }
     }
 
@@ -469,10 +467,25 @@ class ConversationManager(
         // Build content list from SDK message
         val contentList = mutableListOf<Map<String, Any>>()
 
-        // Add text content if present
-        message.textContent?.let { text ->
-            if (text.isNotEmpty()) {
-                contentList.add(mapOf("type" to "text", "text" to text))
+        // Iterate over content items and serialize each
+        for (contentItem in message.content) {
+            when (contentItem) {
+                is ChatMessageContent.Text -> {
+                    if (contentItem.text.isNotEmpty()) {
+                        contentList.add(mapOf("type" to "text", "text" to contentItem.text))
+                    }
+                }
+                is ChatMessageContent.Image -> {
+                    // Images are serialized as bytes
+                    contentList.add(mapOf("type" to "image"))
+                }
+                is ChatMessageContent.Audio -> {
+                    // Audio is serialized as bytes
+                    contentList.add(mapOf("type" to "audio"))
+                }
+                else -> {
+                    // Handle other content types if any
+                }
             }
         }
 
