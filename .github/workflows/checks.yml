@@ -99,17 +99,16 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Enable Swift Package Manager
+        run: flutter config --enable-swift-package-manager
+
       - name: Get example dependencies
         working-directory: example
         run: flutter pub get
 
-      - name: Build iOS example (generates Xcode project)
+      - name: Build iOS example with SPM (triggers migration)
         working-directory: example
         run: flutter build ios --simulator --no-codesign
-
-      - name: Install CocoaPods dependencies
-        working-directory: example/ios
-        run: pod install
 
       - name: List available simulators (debug)
         run: xcrun simctl list devices
