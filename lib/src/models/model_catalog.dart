@@ -84,8 +84,7 @@ const List<LeapModel> leapModelCatalog = [
   LeapModel(
     slug: 'LFM2-1.2B',
     name: 'LFM2-1.2B',
-    description:
-        'Use the new LFM2.5-1.2B-Instruct checkpoint instead.',
+    description: 'Use the new LFM2.5-1.2B-Instruct checkpoint instead.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,

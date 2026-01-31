@@ -174,7 +174,10 @@ class _ModelsScreenState extends State<ModelsScreen> {
               // Filter chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     // Size filter
@@ -231,8 +234,8 @@ class _ModelsScreenState extends State<ModelsScreen> {
                       Text(
                         '${filteredModels.length} of ${allModels.length} models',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                       ),
                     ],
                   ),
@@ -367,8 +370,9 @@ class _FilterDropdown<T> extends StatelessWidget {
           initialValue: value,
           onSelected: onChanged,
           offset: const Offset(0, 40),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           itemBuilder: (context) => items
               .map(
                 (item) => PopupMenuItem<T>(

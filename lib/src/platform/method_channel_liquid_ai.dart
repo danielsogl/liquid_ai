@@ -156,12 +156,14 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
     Map<String, dynamic> message, {
     Map<String, dynamic>? options,
   }) async {
-    final generationId = await methodChannel
-        .invokeMethod<String>('generateResponse', {
-          'conversationId': conversationId,
-          'message': message,
-          'options': ?options,
-        });
+    final generationId = await methodChannel.invokeMethod<String>(
+      'generateResponse',
+      {
+        'conversationId': conversationId,
+        'message': message,
+        'options': ?options,
+      },
+    );
     return generationId!;
   }
 

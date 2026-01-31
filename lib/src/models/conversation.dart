@@ -188,7 +188,9 @@ class Conversation {
               buffer.write(event.chunk);
               tokenCount++;
               // Emit progress event (token count only, not partial JSON)
-              controller.add(StructuredProgressEvent<T>(tokenCount: tokenCount));
+              controller.add(
+                StructuredProgressEvent<T>(tokenCount: tokenCount),
+              );
 
             case GenerationCompleteEvent():
               final rawText = event.message.text ?? buffer.toString();
@@ -238,9 +240,9 @@ class Conversation {
               }
 
               // Step 4: Emit success event with clean JSON
-              final cleanJson = const JsonEncoder.withIndent('  ').convert(
-                jsonMap,
-              );
+              final cleanJson = const JsonEncoder.withIndent(
+                '  ',
+              ).convert(jsonMap);
               controller.add(
                 StructuredCompleteEvent<T>(
                   result: result,

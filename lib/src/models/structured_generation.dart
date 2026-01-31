@@ -124,10 +124,7 @@ class JsonCleaner {
       }
     }
 
-    throw FormatException(
-      'Could not extract valid JSON from response',
-      text,
-    );
+    throw FormatException('Could not extract valid JSON from response', text);
   }
 
   /// Extracts JSON content from markdown code blocks.
@@ -199,8 +196,14 @@ class JsonCleaner {
 
     // Common prefixes
     final prefixes = [
-      RegExp(r"^Here'?s?\s+(the\s+)?(JSON|result|response)[:\s]*", caseSensitive: false),
-      RegExp(r'^(The\s+)?(JSON|result|response)\s+(is|would be)[:\s]*', caseSensitive: false),
+      RegExp(
+        r"^Here'?s?\s+(the\s+)?(JSON|result|response)[:\s]*",
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'^(The\s+)?(JSON|result|response)\s+(is|would be)[:\s]*',
+        caseSensitive: false,
+      ),
       RegExp(r'^Sure[!,.]?\s*(Here[^:]*:)?\s*', caseSensitive: false),
       RegExp(r'^Certainly[!,.]?\s*(Here[^:]*:)?\s*', caseSensitive: false),
     ];
@@ -211,7 +214,10 @@ class JsonCleaner {
 
     // Common suffixes
     final suffixes = [
-      RegExp(r'\s*(Hope\s+this\s+helps[!.]?|Let\s+me\s+know[^.]*[.!]?)\s*$', caseSensitive: false),
+      RegExp(
+        r'\s*(Hope\s+this\s+helps[!.]?|Let\s+me\s+know[^.]*[.!]?)\s*$',
+        caseSensitive: false,
+      ),
       RegExp(r'\s*(This\s+JSON[^.]*[.!]?)\s*$', caseSensitive: false),
     ];
 

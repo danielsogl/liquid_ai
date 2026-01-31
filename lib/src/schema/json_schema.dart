@@ -8,10 +8,7 @@ import 'schema_property.dart';
 /// Result of validating data against a JSON Schema.
 class SchemaValidationResult {
   /// Creates a [SchemaValidationResult].
-  const SchemaValidationResult({
-    required this.isValid,
-    required this.errors,
-  });
+  const SchemaValidationResult({required this.isValid, required this.errors});
 
   /// Whether the data is valid according to the schema.
   final bool isValid;
@@ -44,8 +41,8 @@ class JsonSchema {
     required this.properties,
     required this.required,
   }) : _validator = js.JsonSchema.create(
-          _buildSchemaMap(description, properties, required),
-        );
+         _buildSchemaMap(description, properties, required),
+       );
 
   /// Creates a builder for an object schema with the given description.
   static JsonSchemaBuilder object(String description) {
@@ -111,10 +108,7 @@ class JsonSchema {
     final results = _validator.validate(data);
     // Deduplicate error messages
     final errors = results.errors.map((e) => e.message).toSet().toList();
-    return SchemaValidationResult(
-      isValid: results.isValid,
-      errors: errors,
-    );
+    return SchemaValidationResult(isValid: results.isValid, errors: errors);
   }
 
   @override
