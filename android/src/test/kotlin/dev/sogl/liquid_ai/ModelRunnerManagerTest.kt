@@ -23,7 +23,7 @@ class ModelRunnerManagerTest {
 
         progressHandler = mockk(relaxed = true)
         context = mockk(relaxed = true)
-        every { context.filesDir } returns File(System.getProperty("java.io.tmpdir"))
+        every { context.filesDir } returns File(System.getProperty("java.io.tmpdir") ?: "/tmp")
         manager = ModelRunnerManager(progressHandler, context)
     }
 
@@ -49,7 +49,7 @@ class ModelRunnerManagerTest {
             progressHandler.sendProgress(
                 operationId = operationId,
                 type = OperationType.DOWNLOAD,
-                status = OperationStatus.STARTED
+                status = OperationStatus.STARTED,
             )
         }
     }
@@ -70,17 +70,18 @@ class ModelRunnerManagerTest {
             progressHandler.sendProgress(
                 operationId = operationId,
                 type = OperationType.LOAD,
-                status = OperationStatus.STARTED
+                status = OperationStatus.STARTED,
             )
         }
     }
 
     @Test
-    fun `unloadModel returns false for unknown runner`() = runTest {
-        val result = manager.unloadModel("unknown-runner")
+    fun `unloadModel returns false for unknown runner`() =
+        runTest {
+            val result = manager.unloadModel("unknown-runner")
 
-        assertFalse(result)
-    }
+            assertFalse(result)
+        }
 
     @Test
     fun `cancelOperation marks operation as cancelled`() {
@@ -92,7 +93,7 @@ class ModelRunnerManagerTest {
             progressHandler.sendProgress(
                 operationId = operationId,
                 type = OperationType.DOWNLOAD,
-                status = OperationStatus.CANCELLED
+                status = OperationStatus.CANCELLED,
             )
         }
     }
@@ -164,7 +165,7 @@ class ModelRunnerManagerTest {
             progressHandler.sendProgress(
                 operationId = "non-existent-operation",
                 type = OperationType.DOWNLOAD,
-                status = OperationStatus.CANCELLED
+                status = OperationStatus.CANCELLED,
             )
         }
     }

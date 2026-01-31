@@ -29,7 +29,9 @@ actor ConversationManager {
     func createConversation(
         runnerId: String,
         systemPrompt: String?
-    ) async throws -> String {
+    ) async throws
+        -> String
+    {
         guard let runner = await runnerManager.getRunner(runnerId: runnerId) else {
             throw ConversationError.runnerNotFound(runnerId)
         }
@@ -37,7 +39,7 @@ actor ConversationManager {
         let conversationId = UUID().uuidString
 
         var history: [ChatMessage] = []
-        if let systemPrompt = systemPrompt {
+        if let systemPrompt {
             history.append(ChatMessage(
                 role: .system,
                 content: [.text(systemPrompt)]
@@ -60,7 +62,9 @@ actor ConversationManager {
     func createConversationFromHistory(
         runnerId: String,
         history: [[String: Any]]
-    ) async throws -> String {
+    ) async throws
+        -> String
+    {
         guard let runner = await runnerManager.getRunner(runnerId: runnerId) else {
             throw ConversationError.runnerNotFound(runnerId)
         }
@@ -102,7 +106,7 @@ actor ConversationManager {
         let export: [String: Any] = [
             "conversationId": conversationId,
             "runnerId": state.runnerId,
-            "messages": state.history.map { Self.serializeChatMessage($0) }
+            "messages": state.history.map { Self.serializeChatMessage($0) },
         ]
 
         let data = try JSONSerialization.data(withJSONObject: export, options: .prettyPrinted)
@@ -116,7 +120,9 @@ actor ConversationManager {
         conversationId: String,
         message: [String: Any],
         options: [String: Any]?
-    ) async throws -> String {
+    ) async throws
+        -> String
+    {
         guard var state = conversations[conversationId] else {
             throw ConversationError.conversationNotFound(conversationId)
         }
@@ -133,7 +139,9 @@ actor ConversationManager {
         conversations[conversationId] = state
 
         let task = Task { [weak self] in
-            guard let self = self else { return }
+            guard let self else {
+                return
+            }
 
             do {
                 var generatedText = ""
@@ -141,7 +149,7 @@ actor ConversationManager {
                 let startTime = Date()
 
                 // Get the conversation from state
-                guard let currentState = await self.getConversationState(conversationId) else {
+                guard let currentState = await getConversationState(conversationId) else {
                     return
                 }
 
@@ -153,47 +161,47 @@ actor ConversationManager {
                     message: userMessage,
                     generationOptions: generationOptions
                 ) {
-                    let isCancelled = await self.isGenerationCancelled(generationId)
+                    let isCancelled = await isGenerationCancelled(generationId)
                     if isCancelled {
-                        self.progressHandler.sendCancelled(generationId: generationId)
-                        await self.removeGeneration(generationId)
+                        progressHandler.sendCancelled(generationId: generationId)
+                        await removeGeneration(generationId)
                         return
                     }
 
                     switch response {
-                    case .chunk(let text):
+                    case let .chunk(text):
                         generatedText += text
                         tokenCount += 1
-                        self.progressHandler.sendChunk(generationId: generationId, chunk: text)
+                        progressHandler.sendChunk(generationId: generationId, chunk: text)
 
-                    case .reasoningChunk(let reasoning):
-                        self.progressHandler.sendReasoningChunk(generationId: generationId, chunk: reasoning)
+                    case let .reasoningChunk(reasoning):
+                        progressHandler.sendReasoningChunk(generationId: generationId, chunk: reasoning)
 
-                    case .audioSample(let samples, let sampleRate):
-                        self.progressHandler.sendAudioSamples(
+                    case let .audioSample(samples, sampleRate):
+                        progressHandler.sendAudioSamples(
                             generationId: generationId,
                             samples: samples,
                             sampleRate: sampleRate
                         )
 
-                    case .functionCall(let calls):
-                        let serializedCalls = calls.enumerated().map { (index, call) -> [String: Any] in
+                    case let .functionCall(calls):
+                        let serializedCalls = calls.enumerated().map { index, call -> [String: Any] in
                             [
                                 "id": "call_\(index)",
                                 "name": call.name,
-                                "arguments": call.arguments as Any
+                                "arguments": call.arguments as Any,
                             ]
                         }
-                        self.progressHandler.sendFunctionCalls(
+                        progressHandler.sendFunctionCalls(
                             generationId: generationId,
                             calls: serializedCalls
                         )
 
-                    case .complete(let completion):
-                        let isCancelled = await self.isGenerationCancelled(generationId)
+                    case let .complete(completion):
+                        let isCancelled = await isGenerationCancelled(generationId)
                         if isCancelled {
-                            self.progressHandler.sendCancelled(generationId: generationId)
-                            await self.removeGeneration(generationId)
+                            progressHandler.sendCancelled(generationId: generationId)
+                            await removeGeneration(generationId)
                             return
                         }
 
@@ -201,7 +209,7 @@ actor ConversationManager {
                         let assistantMessage = completion.message
 
                         // Add to history
-                        await self.appendMessage(conversationId: conversationId, message: assistantMessage)
+                        await appendMessage(conversationId: conversationId, message: assistantMessage)
 
                         let duration = Date().timeIntervalSince(startTime)
                         let tokensPerSecond = duration > 0 ? Double(tokenCount) / duration : 0
@@ -211,7 +219,7 @@ actor ConversationManager {
                         var stats: [String: Any] = [
                             "tokenCount": tokenCount,
                             "tokensPerSecond": tokensPerSecond,
-                            "generationTimeMs": Int(duration * 1000)
+                            "generationTimeMs": Int(duration * 1000),
                         ]
 
                         if let genStats = completion.stats {
@@ -219,26 +227,26 @@ actor ConversationManager {
                             stats["completionTokenCount"] = genStats.completionTokens
                         }
 
-                        self.progressHandler.sendComplete(
+                        progressHandler.sendComplete(
                             generationId: generationId,
                             message: Self.serializeChatMessage(assistantMessage),
                             finishReason: finishReason,
                             stats: stats
                         )
 
-                        await self.removeGeneration(generationId)
+                        await removeGeneration(generationId)
                     }
                 }
 
             } catch {
-                let isCancelled = await self.isGenerationCancelled(generationId)
+                let isCancelled = await isGenerationCancelled(generationId)
                 if !isCancelled {
-                    self.progressHandler.sendError(
+                    progressHandler.sendError(
                         generationId: generationId,
                         error: error.localizedDescription
                     )
                 }
-                await self.removeGeneration(generationId)
+                await removeGeneration(generationId)
             }
         }
 
@@ -268,7 +276,8 @@ actor ConversationManager {
         // Parse the function definition from Flutter
         guard let name = function["name"] as? String,
               let description = function["description"] as? String,
-              let parametersSchema = function["parameters"] as? [String: Any] else {
+              let parametersSchema = function["parameters"] as? [String: Any] else
+        {
             throw ConversationError.invalidMessage
         }
 
@@ -300,7 +309,8 @@ actor ConversationManager {
         }
 
         guard let callId = result["callId"] as? String,
-              let resultText = result["result"] as? String else {
+              let resultText = result["result"] as? String else
+        {
             throw ConversationError.invalidMessage
         }
 
@@ -325,7 +335,7 @@ actor ConversationManager {
 
         let requiredFields = (schema["required"] as? [String]) ?? []
 
-        return properties.compactMap { (name, propertySchema) -> LeapFunctionParameter? in
+        return properties.compactMap { name, propertySchema -> LeapFunctionParameter? in
             guard let typeString = propertySchema["type"] as? String else {
                 return nil
             }
@@ -359,7 +369,8 @@ actor ConversationManager {
         case "array":
             // Parse array item type if available
             if let itemsSchema = schema["items"] as? [String: Any],
-               let itemType = itemsSchema["type"] as? String {
+               let itemType = itemsSchema["type"] as? String
+            {
                 let itemParamType = parseParameterType(itemType, schema: itemsSchema)
                 return .array(ArrayType(itemType: itemParamType))
             }
@@ -385,7 +396,7 @@ actor ConversationManager {
     // MARK: - Private Helpers
 
     private func getConversationState(_ conversationId: String) -> ConversationState? {
-        return conversations[conversationId]
+        conversations[conversationId]
     }
 
     private func appendMessage(conversationId: String, message: ChatMessage) {
@@ -396,7 +407,7 @@ actor ConversationManager {
     }
 
     private func isGenerationCancelled(_ generationId: String) -> Bool {
-        return cancelledGenerations.contains(generationId)
+        cancelledGenerations.contains(generationId)
     }
 
     private func removeGeneration(_ generationId: String) {
@@ -426,7 +437,9 @@ actor ConversationManager {
 
     /// Parses Flutter generation options into LeapSDK GenerationOptions.
     static func parseGenerationOptions(_ options: [String: Any]?) -> GenerationOptions? {
-        guard let options = options else { return nil }
+        guard let options else {
+            return nil
+        }
 
         var genOptions = GenerationOptions()
 
@@ -462,10 +475,12 @@ actor ConversationManager {
             case "hermes":
                 genOptions.functionCallParser = HermesFunctionCallParser()
                 print("[LiquidAI] Using HermesFunctionCallParser")
-            case "raw", "none":
+            case "raw",
+                 "none":
                 genOptions.functionCallParser = nil
                 print("[LiquidAI] Using raw function call output (no parser)")
-            case "lfm", "default":
+            case "lfm",
+                 "default":
                 genOptions.functionCallParser = LFMFunctionCallParser()
                 print("[LiquidAI] Using LFMFunctionCallParser")
             default:
@@ -481,7 +496,8 @@ actor ConversationManager {
 
     static func parseChatMessage(_ map: [String: Any]) -> ChatMessage? {
         guard let roleString = map["role"] as? String,
-              let contentList = map["content"] as? [[String: Any]] else {
+              let contentList = map["content"] as? [[String: Any]] else
+        {
             return nil
         }
 
@@ -496,7 +512,9 @@ actor ConversationManager {
 
         var content: [ChatMessageContent] = []
         for item in contentList {
-            guard let type = item["type"] as? String else { continue }
+            guard let type = item["type"] as? String else {
+                continue
+            }
             switch type {
             case "text":
                 if let text = item["text"] as? String {
@@ -521,23 +539,22 @@ actor ConversationManager {
     }
 
     static func serializeChatMessage(_ message: ChatMessage) -> [String: Any] {
-        let roleString: String
-        switch message.role {
-        case .system: roleString = "system"
-        case .user: roleString = "user"
-        case .assistant: roleString = "assistant"
-        case .tool: roleString = "tool"
-        @unknown default: roleString = "user"
+        let roleString = switch message.role {
+        case .system: "system"
+        case .user: "user"
+        case .assistant: "assistant"
+        case .tool: "tool"
+        @unknown default: "user"
         }
 
         var contentList: [[String: Any]] = []
         for item in message.content {
             switch item {
-            case .text(let text):
+            case let .text(text):
                 contentList.append(["type": "text", "text": text])
-            case .image(let data):
+            case let .image(data):
                 contentList.append(["type": "image", "data": Array(data).map { Int($0) }])
-            case .audio(let data):
+            case let .audio(data):
                 contentList.append(["type": "audio", "data": Array(data).map { Int($0) }])
             @unknown default:
                 break
@@ -546,7 +563,7 @@ actor ConversationManager {
 
         return [
             "role": roleString,
-            "content": contentList
+            "content": contentList,
         ]
     }
 
@@ -580,14 +597,14 @@ enum ConversationError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .runnerNotFound(let id):
-            return "Model runner not found: \(id)"
-        case .conversationNotFound(let id):
-            return "Conversation not found: \(id)"
+        case let .runnerNotFound(id):
+            "Model runner not found: \(id)"
+        case let .conversationNotFound(id):
+            "Conversation not found: \(id)"
         case .invalidMessage:
-            return "Invalid message format"
-        case .generationFailed(let reason):
-            return "Generation failed: \(reason)"
+            "Invalid message format"
+        case let .generationFailed(reason):
+            "Generation failed: \(reason)"
         }
     }
 }

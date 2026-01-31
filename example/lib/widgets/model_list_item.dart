@@ -494,6 +494,7 @@ class ModelListItem extends StatelessWidget {
       ModelQuantization.q4KM => 'Good balance of size and quality',
       ModelQuantization.q5KM => 'Better quality, larger size',
       ModelQuantization.q8_0 => 'Best quality, largest size',
+      ModelQuantization.f16 => 'Full precision, largest size',
     };
   }
 

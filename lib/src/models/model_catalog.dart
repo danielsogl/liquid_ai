@@ -355,12 +355,10 @@ class ModelCatalog {
       leapModelCatalog.where((m) => !m.isGeneralPurpose).toList();
 
   /// Returns vision-language models.
-  static List<LeapModel> get visionModels =>
-      byModality(ModelModality.image);
+  static List<LeapModel> get visionModels => byModality(ModelModality.image);
 
   /// Returns audio models.
-  static List<LeapModel> get audioModels =>
-      byModality(ModelModality.audio);
+  static List<LeapModel> get audioModels => byModality(ModelModality.audio);
 
   /// Returns Liquid AI native models only (excludes third-party like Qwen).
   static List<LeapModel> get liquidModels =>

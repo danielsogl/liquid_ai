@@ -7,16 +7,18 @@ final class DownloadProgressHandler: NSObject, FlutterStreamHandler {
     private let lock = NSLock()
 
     func onListen(
-        withArguments arguments: Any?,
+        withArguments _: Any?,
         eventSink events: @escaping FlutterEventSink
-    ) -> FlutterError? {
+    )
+        -> FlutterError?
+    {
         lock.lock()
         defer { lock.unlock() }
         eventSink = events
         return nil
     }
 
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    func onCancel(withArguments _: Any?) -> FlutterError? {
         lock.lock()
         defer { lock.unlock() }
         eventSink = nil
@@ -42,14 +44,14 @@ final class DownloadProgressHandler: NSObject, FlutterStreamHandler {
             "type": type.rawValue,
             "status": status.rawValue,
             "progress": progress,
-            "speed": speed
+            "speed": speed,
         ]
 
-        if let runnerId = runnerId {
+        if let runnerId {
             event["runnerId"] = runnerId
         }
 
-        if let error = error {
+        if let error {
             event["error"] = error
         }
 

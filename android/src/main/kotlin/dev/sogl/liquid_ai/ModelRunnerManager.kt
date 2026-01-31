@@ -8,10 +8,10 @@ import kotlinx.coroutines.*
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/// Manages model runners and download operations.
+// / Manages model runners and download operations.
 class ModelRunnerManager(
     private val progressHandler: DownloadProgressHandler,
-    private val context: Context
+    private val context: Context,
 ) {
     private val runners = ConcurrentHashMap<String, ModelRunner>()
     private val activeTasks = ConcurrentHashMap<String, Job>()
@@ -19,12 +19,13 @@ class ModelRunnerManager(
 
     // Use an absolute path for model storage that we control
     private val modelStorageDir = java.io.File(context.filesDir, "leap_models")
-    private val downloader = LeapDownloader(
-        LeapDownloaderConfig(saveDir = modelStorageDir.absolutePath)
-    )
+    private val downloader =
+        LeapDownloader(
+            LeapDownloaderConfig(saveDir = modelStorageDir.absolutePath),
+        )
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    /// Recursively deletes a directory and all its contents.
+    // / Recursively deletes a directory and all its contents.
     private fun deleteDirectoryRecursively(file: java.io.File): Boolean {
         if (file.isDirectory) {
             file.listFiles()?.forEach { child ->
@@ -34,9 +35,12 @@ class ModelRunnerManager(
         return file.delete()
     }
 
-    /// Cleans up any partial download for a model.
-    /// This directly deletes the model folder to avoid "Path already exist" errors.
-    private suspend fun cleanupPartialDownload(model: String, quantization: String) {
+    // / Cleans up any partial download for a model.
+    // / This directly deletes the model folder to avoid "Path already exist" errors.
+    private suspend fun cleanupPartialDownload(
+        model: String,
+        quantization: String,
+    ) {
         val folderName = "$model-$quantization"
 
         // Delete from our known storage directory (configured in LeapDownloaderConfig)
@@ -55,10 +59,10 @@ class ModelRunnerManager(
 
     // MARK: - Download Only
 
-    /// Downloads a model without loading it.
+    // / Downloads a model without loading it.
     fun downloadModel(
         model: String,
-        quantization: String
+        quantization: String,
     ): String {
         val operationId = UUID.randomUUID().toString()
         cancelledOperations.remove(operationId)
@@ -66,72 +70,73 @@ class ModelRunnerManager(
         progressHandler.sendProgress(
             operationId = operationId,
             type = OperationType.DOWNLOAD,
-            status = OperationStatus.STARTED
+            status = OperationStatus.STARTED,
         )
 
-        val job = scope.launch {
-            try {
-                // Clean up any existing partial downloads before starting
-                // This prevents "Path already exist" errors from kotlinx.io
-                if (!isModelDownloaded(model, quantization)) {
-                    cleanupPartialDownload(model, quantization)
-                }
+        val job =
+            scope.launch {
+                try {
+                    // Clean up any existing partial downloads before starting
+                    // This prevents "Path already exist" errors from kotlinx.io
+                    if (!isModelDownloaded(model, quantization)) {
+                        cleanupPartialDownload(model, quantization)
+                    }
 
-                // Track bytes and time for speed calculation
-                var lastBytes = 0L
-                var lastTime = System.currentTimeMillis()
-                var lastSpeed = 0L
+                    // Track bytes and time for speed calculation
+                    var lastBytes = 0L
+                    var lastTime = System.currentTimeMillis()
+                    var lastSpeed = 0L
 
-                downloader.downloadModel(model, quantization) { progressData ->
-                    if (!cancelledOperations.contains(operationId)) {
-                        val currentTime = System.currentTimeMillis()
-                        val currentBytes = progressData.bytes
-                        val elapsedMs = currentTime - lastTime
+                    downloader.downloadModel(model, quantization) { progressData ->
+                        if (!cancelledOperations.contains(operationId)) {
+                            val currentTime = System.currentTimeMillis()
+                            val currentBytes = progressData.bytes
+                            val elapsedMs = currentTime - lastTime
 
-                        // Only recalculate speed if enough time has passed (100ms minimum)
-                        val speed = if (elapsedMs >= 100) {
-                            val newSpeed = ((currentBytes - lastBytes) * 1000L) / elapsedMs
-                            lastBytes = currentBytes
-                            lastTime = currentTime
-                            lastSpeed = newSpeed
-                            newSpeed
-                        } else {
-                            lastSpeed // Keep previous speed
+                            // Only recalculate speed if enough time has passed (100ms minimum)
+                            val speed =
+                                if (elapsedMs >= 100) {
+                                    val newSpeed = ((currentBytes - lastBytes) * 1000L) / elapsedMs
+                                    lastBytes = currentBytes
+                                    lastTime = currentTime
+                                    lastSpeed = newSpeed
+                                    newSpeed
+                                } else {
+                                    lastSpeed // Keep previous speed
+                                }
+
+                            progressHandler.sendProgress(
+                                operationId = operationId,
+                                type = OperationType.DOWNLOAD,
+                                status = OperationStatus.PROGRESS,
+                                progress = progressData.progress.toDouble(),
+                                speed = speed,
+                            )
                         }
+                    }
 
+                    if (!cancelledOperations.contains(operationId)) {
                         progressHandler.sendProgress(
                             operationId = operationId,
                             type = OperationType.DOWNLOAD,
-                            status = OperationStatus.PROGRESS,
-                            progress = progressData.progress.toDouble(),
-                            speed = speed
+                            status = OperationStatus.COMPLETED,
+                            progress = 1.0,
                         )
                     }
-                }
 
-                if (!cancelledOperations.contains(operationId)) {
-                    progressHandler.sendProgress(
-                        operationId = operationId,
-                        type = OperationType.DOWNLOAD,
-                        status = OperationStatus.COMPLETED,
-                        progress = 1.0
-                    )
+                    activeTasks.remove(operationId)
+                } catch (e: Exception) {
+                    if (!cancelledOperations.contains(operationId)) {
+                        progressHandler.sendProgress(
+                            operationId = operationId,
+                            type = OperationType.DOWNLOAD,
+                            status = OperationStatus.ERROR,
+                            error = e.message ?: "Download failed",
+                        )
+                    }
+                    activeTasks.remove(operationId)
                 }
-
-                activeTasks.remove(operationId)
-
-            } catch (e: Exception) {
-                if (!cancelledOperations.contains(operationId)) {
-                    progressHandler.sendProgress(
-                        operationId = operationId,
-                        type = OperationType.DOWNLOAD,
-                        status = OperationStatus.ERROR,
-                        error = e.message ?: "Download failed"
-                    )
-                }
-                activeTasks.remove(operationId)
             }
-        }
 
         activeTasks[operationId] = job
         return operationId
@@ -139,10 +144,10 @@ class ModelRunnerManager(
 
     // MARK: - Load Model
 
-    /// Downloads (if needed) and loads a model.
+    // / Downloads (if needed) and loads a model.
     fun loadModel(
         model: String,
-        quantization: String
+        quantization: String,
     ): String {
         val operationId = UUID.randomUUID().toString()
         cancelledOperations.remove(operationId)
@@ -150,79 +155,81 @@ class ModelRunnerManager(
         progressHandler.sendProgress(
             operationId = operationId,
             type = OperationType.LOAD,
-            status = OperationStatus.STARTED
+            status = OperationStatus.STARTED,
         )
 
-        val job = scope.launch {
-            try {
-                // Clean up any existing partial downloads before starting
-                // This prevents "Path already exist" errors from kotlinx.io
-                if (!isModelDownloaded(model, quantization)) {
-                    cleanupPartialDownload(model, quantization)
-                }
+        val job =
+            scope.launch {
+                try {
+                    // Clean up any existing partial downloads before starting
+                    // This prevents "Path already exist" errors from kotlinx.io
+                    if (!isModelDownloaded(model, quantization)) {
+                        cleanupPartialDownload(model, quantization)
+                    }
 
-                // Track bytes and time for speed calculation
-                var lastBytes = 0L
-                var lastTime = System.currentTimeMillis()
-                var lastSpeed = 0L
+                    // Track bytes and time for speed calculation
+                    var lastBytes = 0L
+                    var lastTime = System.currentTimeMillis()
+                    var lastSpeed = 0L
 
-                val runner = downloader.loadModel(model, quantization) { progressData ->
-                    if (!cancelledOperations.contains(operationId)) {
-                        val currentTime = System.currentTimeMillis()
-                        val currentBytes = progressData.bytes
-                        val elapsedMs = currentTime - lastTime
+                    val runner =
+                        downloader.loadModel(model, quantization) { progressData ->
+                            if (!cancelledOperations.contains(operationId)) {
+                                val currentTime = System.currentTimeMillis()
+                                val currentBytes = progressData.bytes
+                                val elapsedMs = currentTime - lastTime
 
-                        // Only recalculate speed if enough time has passed (100ms minimum)
-                        val speed = if (elapsedMs >= 100) {
-                            val newSpeed = ((currentBytes - lastBytes) * 1000L) / elapsedMs
-                            lastBytes = currentBytes
-                            lastTime = currentTime
-                            lastSpeed = newSpeed
-                            newSpeed
-                        } else {
-                            lastSpeed // Keep previous speed
+                                // Only recalculate speed if enough time has passed (100ms minimum)
+                                val speed =
+                                    if (elapsedMs >= 100) {
+                                        val newSpeed = ((currentBytes - lastBytes) * 1000L) / elapsedMs
+                                        lastBytes = currentBytes
+                                        lastTime = currentTime
+                                        lastSpeed = newSpeed
+                                        newSpeed
+                                    } else {
+                                        lastSpeed // Keep previous speed
+                                    }
+
+                                progressHandler.sendProgress(
+                                    operationId = operationId,
+                                    type = OperationType.LOAD,
+                                    status = OperationStatus.PROGRESS,
+                                    progress = progressData.progress.toDouble(),
+                                    speed = speed,
+                                )
+                            }
                         }
 
-                        progressHandler.sendProgress(
-                            operationId = operationId,
-                            type = OperationType.LOAD,
-                            status = OperationStatus.PROGRESS,
-                            progress = progressData.progress.toDouble(),
-                            speed = speed
-                        )
+                    if (cancelledOperations.contains(operationId)) {
+                        runner.unload()
+                        return@launch
                     }
-                }
 
-                if (cancelledOperations.contains(operationId)) {
-                    runner.unload()
-                    return@launch
-                }
+                    val runnerId = UUID.randomUUID().toString()
+                    runners[runnerId] = runner
 
-                val runnerId = UUID.randomUUID().toString()
-                runners[runnerId] = runner
-
-                progressHandler.sendProgress(
-                    operationId = operationId,
-                    type = OperationType.LOAD,
-                    status = OperationStatus.COMPLETED,
-                    progress = 1.0,
-                    runnerId = runnerId
-                )
-
-                activeTasks.remove(operationId)
-
-            } catch (e: Exception) {
-                if (!cancelledOperations.contains(operationId)) {
                     progressHandler.sendProgress(
                         operationId = operationId,
                         type = OperationType.LOAD,
-                        status = OperationStatus.ERROR,
-                        error = e.message ?: "Load failed"
+                        status = OperationStatus.COMPLETED,
+                        progress = 1.0,
+                        runnerId = runnerId,
                     )
+
+                    activeTasks.remove(operationId)
+                } catch (e: Exception) {
+                    if (!cancelledOperations.contains(operationId)) {
+                        progressHandler.sendProgress(
+                            operationId = operationId,
+                            type = OperationType.LOAD,
+                            status = OperationStatus.ERROR,
+                            error = e.message ?: "Load failed",
+                        )
+                    }
+                    activeTasks.remove(operationId)
                 }
-                activeTasks.remove(operationId)
             }
-        }
 
         activeTasks[operationId] = job
         return operationId
@@ -230,10 +237,10 @@ class ModelRunnerManager(
 
     // MARK: - Unload Model
 
-    /// Unloads a previously loaded model runner.
-    ///
-    /// This is a suspend function that waits for the unload to complete
-    /// to ensure memory is actually released before returning.
+    // / Unloads a previously loaded model runner.
+    // /
+    // / This is a suspend function that waits for the unload to complete
+    // / to ensure memory is actually released before returning.
     suspend fun unloadModel(runnerId: String): Boolean {
         val runner = runners.remove(runnerId) ?: return false
         runner.unload()
@@ -250,8 +257,11 @@ class ModelRunnerManager(
 
     // MARK: - Query Status
 
-    /// Checks if a model is already downloaded.
-    fun isModelDownloaded(model: String, quantization: String): Boolean {
+    // / Checks if a model is already downloaded.
+    fun isModelDownloaded(
+        model: String,
+        quantization: String,
+    ): Boolean {
         // Check directly for the manifest file at the known path
         // Path pattern: {filesDir}/leap_models/{model}-{quantization}/{model}-{quantization}.json
         val folderName = "$model-$quantization"
@@ -259,19 +269,25 @@ class ModelRunnerManager(
         return manifestFile.exists()
     }
 
-    /// Gets the download status of a model.
-    fun getModelStatus(model: String, quantization: String): Map<String, Any> {
+    // / Gets the download status of a model.
+    fun getModelStatus(
+        model: String,
+        quantization: String,
+    ): Map<String, Any> {
         val isDownloaded = isModelDownloaded(model, quantization)
         return mapOf(
             "type" to if (isDownloaded) "downloaded" else "notOnLocal",
-            "progress" to if (isDownloaded) 1.0 else 0.0
+            "progress" to if (isDownloaded) 1.0 else 0.0,
         )
     }
 
     // MARK: - Delete Model
 
-    /// Deletes a downloaded model from local storage.
-    fun deleteModel(model: String, quantization: String) {
+    // / Deletes a downloaded model from local storage.
+    fun deleteModel(
+        model: String,
+        quantization: String,
+    ) {
         scope.launch {
             downloader.deleteModelResources(model, quantization)
         }
@@ -279,7 +295,7 @@ class ModelRunnerManager(
 
     // MARK: - Cancel Operation
 
-    /// Cancels an ongoing download or load operation.
+    // / Cancels an ongoing download or load operation.
     fun cancelOperation(operationId: String) {
         cancelledOperations.add(operationId)
 
@@ -289,18 +305,16 @@ class ModelRunnerManager(
         progressHandler.sendProgress(
             operationId = operationId,
             type = OperationType.DOWNLOAD,
-            status = OperationStatus.CANCELLED
+            status = OperationStatus.CANCELLED,
         )
     }
 
     // MARK: - Model Runner Access
 
-    /// Gets a model runner by ID.
-    fun getRunner(runnerId: String): ModelRunner? {
-        return runners[runnerId]
-    }
+    // / Gets a model runner by ID.
+    fun getRunner(runnerId: String): ModelRunner? = runners[runnerId]
 
-    /// Cleans up resources.
+    // / Cleans up resources.
     fun dispose() {
         scope.cancel()
         // Note: runners will be cleaned up when scope is cancelled

@@ -78,12 +78,13 @@ class ConversationManagerTest {
     fun `createConversationFromHistory returns conversation ID`() {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
-        val history = listOf(
-            mapOf(
-                "role" to "user",
-                "content" to listOf(mapOf("type" to "text", "text" to "Hello"))
+        val history =
+            listOf(
+                mapOf(
+                    "role" to "user",
+                    "content" to listOf(mapOf("type" to "text", "text" to "Hello")),
+                ),
             )
-        )
 
         val conversationId = manager.createConversationFromHistory("runner-123", history)
 
@@ -142,10 +143,11 @@ class ConversationManagerTest {
 
     @Test
     fun `generateResponse throws when conversation not found`() {
-        val message = mapOf(
-            "role" to "user",
-            "content" to listOf(mapOf("type" to "text", "text" to "Hello"))
-        )
+        val message =
+            mapOf(
+                "role" to "user",
+                "content" to listOf(mapOf("type" to "text", "text" to "Hello")),
+            )
 
         assertThrows(ConversationException::class.java) {
             manager.generateResponse("unknown-conversation", message, null)
@@ -169,10 +171,11 @@ class ConversationManagerTest {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
         val conversationId = manager.createConversation("runner-123", null)
-        val message = mapOf(
-            "role" to "user",
-            "content" to listOf(mapOf("type" to "text", "text" to "Hello"))
-        )
+        val message =
+            mapOf(
+                "role" to "user",
+                "content" to listOf(mapOf("type" to "text", "text" to "Hello")),
+            )
 
         val generationId = manager.generateResponse(conversationId, message, null)
 
@@ -185,10 +188,11 @@ class ConversationManagerTest {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
         val conversationId = manager.createConversation("runner-123", null)
-        val message = mapOf(
-            "role" to "user",
-            "content" to listOf(mapOf("type" to "text", "text" to "Hello"))
-        )
+        val message =
+            mapOf(
+                "role" to "user",
+                "content" to listOf(mapOf("type" to "text", "text" to "Hello")),
+            )
         val generationId = manager.generateResponse(conversationId, message, null)
 
         manager.stopGeneration(generationId)
@@ -198,11 +202,12 @@ class ConversationManagerTest {
 
     @Test
     fun `registerFunction throws when conversation not found`() {
-        val function = mapOf(
-            "name" to "get_weather",
-            "description" to "Get weather",
-            "parameters" to mapOf<String, Any>()
-        )
+        val function =
+            mapOf(
+                "name" to "get_weather",
+                "description" to "Get weather",
+                "parameters" to mapOf<String, Any>(),
+            )
 
         assertThrows(ConversationException::class.java) {
             manager.registerFunction("unknown-conversation", function)
@@ -214,10 +219,11 @@ class ConversationManagerTest {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
         val conversationId = manager.createConversation("runner-123", null)
-        val function = mapOf(
-            "description" to "Get weather",
-            "parameters" to mapOf<String, Any>()
-        )
+        val function =
+            mapOf(
+                "description" to "Get weather",
+                "parameters" to mapOf<String, Any>(),
+            )
 
         assertThrows(ConversationException::class.java) {
             manager.registerFunction(conversationId, function)
@@ -229,10 +235,11 @@ class ConversationManagerTest {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
         val conversationId = manager.createConversation("runner-123", null)
-        val function = mapOf(
-            "name" to "get_weather",
-            "parameters" to mapOf<String, Any>()
-        )
+        val function =
+            mapOf(
+                "name" to "get_weather",
+                "parameters" to mapOf<String, Any>(),
+            )
 
         assertThrows(ConversationException::class.java) {
             manager.registerFunction(conversationId, function)
@@ -246,20 +253,24 @@ class ConversationManagerTest {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
         val conversationId = manager.createConversation("runner-123", null)
-        val function = mapOf(
-            "name" to "get_weather",
-            "description" to "Get weather for a location",
-            "parameters" to mapOf(
-                "type" to "object",
-                "properties" to mapOf(
-                    "location" to mapOf(
-                        "type" to "string",
-                        "description" to "The city name"
-                    )
-                ),
-                "required" to listOf("location")
+        val function =
+            mapOf(
+                "name" to "get_weather",
+                "description" to "Get weather for a location",
+                "parameters" to
+                    mapOf(
+                        "type" to "object",
+                        "properties" to
+                            mapOf(
+                                "location" to
+                                    mapOf(
+                                        "type" to "string",
+                                        "description" to "The city name",
+                                    ),
+                            ),
+                        "required" to listOf("location"),
+                    ),
             )
-        )
 
         // Should not throw
         manager.registerFunction(conversationId, function)
@@ -270,10 +281,11 @@ class ConversationManagerTest {
 
     @Test
     fun `provideFunctionResult throws when conversation not found`() {
-        val result = mapOf(
-            "callId" to "call_0",
-            "result" to "Sunny, 25C"
-        )
+        val result =
+            mapOf(
+                "callId" to "call_0",
+                "result" to "Sunny, 25C",
+            )
 
         assertThrows(ConversationException::class.java) {
             manager.provideFunctionResult("unknown-conversation", result)
@@ -309,10 +321,11 @@ class ConversationManagerTest {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
         val conversationId = manager.createConversation("runner-123", null)
-        val result = mapOf(
-            "callId" to "call_0",
-            "result" to "Sunny, 25C"
-        )
+        val result =
+            mapOf(
+                "callId" to "call_0",
+                "result" to "Sunny, 25C",
+            )
 
         manager.provideFunctionResult(conversationId, result)
 
@@ -326,10 +339,11 @@ class ConversationManagerTest {
         every { runnerManager.getRunner("runner-123") } returns mockRunner
 
         val conversationId = manager.createConversation("runner-123", null)
-        val message = mapOf(
-            "role" to "user",
-            "content" to listOf(mapOf("type" to "text", "text" to "Hello"))
-        )
+        val message =
+            mapOf(
+                "role" to "user",
+                "content" to listOf(mapOf("type" to "text", "text" to "Hello")),
+            )
         manager.generateResponse(conversationId, message, null)
 
         // Should not throw

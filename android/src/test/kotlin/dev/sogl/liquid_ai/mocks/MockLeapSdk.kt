@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 
-/// Mock implementation of ModelRunner for testing.
+// / Mock implementation of ModelRunner for testing.
 class MockModelRunner : ModelRunner {
     var unloadCalled = false
     var createConversationSystemPrompt: String? = null
@@ -46,7 +46,7 @@ class MockModelRunner : ModelRunner {
     override suspend fun generateFromConversation(
         conversation: Conversation,
         callback: ModelRunner.GenerationCallback,
-        generationOptions: GenerationOptions?
+        generationOptions: GenerationOptions?,
     ): ModelRunner.GenerationHandler {
         // Return a mock handler
         return object : ModelRunner.GenerationHandler {
@@ -54,14 +54,17 @@ class MockModelRunner : ModelRunner {
         }
     }
 
-    override suspend fun getPromptTokensSize(messages: List<ChatMessage>, addBosToken: Boolean): Int {
+    override suspend fun getPromptTokensSize(
+        messages: List<ChatMessage>,
+        addBosToken: Boolean,
+    ): Int {
         return messages.size * 10 // Mock token count
     }
 }
 
-/// Mock implementation of Conversation for testing.
+// / Mock implementation of Conversation for testing.
 class MockConversation(
-    override val modelRunner: ModelRunner = MockModelRunner()
+    override val modelRunner: ModelRunner = MockModelRunner(),
 ) : Conversation {
     var registeredFunctions = mutableListOf<LeapFunction>()
     var generateResponseCalled = false
@@ -76,39 +79,42 @@ class MockConversation(
     override val functions: List<LeapFunction> get() = registeredFunctions
 
     // Configure mock response behavior
-    var mockResponses: List<MessageResponse> = listOf(
-        MessageResponse.Chunk("Hello "),
-        MessageResponse.Chunk("World!"),
-        MessageResponse.Complete(
-            fullMessage = ChatMessage(ChatMessage.Role.ASSISTANT, "Hello World!"),
-            finishReason = GenerationFinishReason.STOP,
-            stats = GenerationStats(
-                promptTokens = 10L,
-                completionTokens = 5L,
-                totalTokens = 15L,
-                tokenPerSecond = 10.0f
-            )
+    var mockResponses: List<MessageResponse> =
+        listOf(
+            MessageResponse.Chunk("Hello "),
+            MessageResponse.Chunk("World!"),
+            MessageResponse.Complete(
+                fullMessage = ChatMessage(ChatMessage.Role.ASSISTANT, "Hello World!"),
+                finishReason = GenerationFinishReason.STOP,
+                stats =
+                    GenerationStats(
+                        promptTokens = 10L,
+                        completionTokens = 5L,
+                        totalTokens = 15L,
+                        tokenPerSecond = 10.0f,
+                    ),
+            ),
         )
-    )
     var shouldThrowError = false
     var errorToThrow: Exception = RuntimeException("Mock error")
 
     override fun generateResponse(
         message: ChatMessage,
-        options: GenerationOptions?
-    ): Flow<MessageResponse> = flow {
-        generateResponseCalled = true
-        lastMessage = message
-        lastOptions = options
+        generationOptions: GenerationOptions?,
+    ): Flow<MessageResponse> =
+        flow {
+            generateResponseCalled = true
+            lastMessage = message
+            lastOptions = generationOptions
 
-        if (shouldThrowError) {
-            throw errorToThrow
-        }
+            if (shouldThrowError) {
+                throw errorToThrow
+            }
 
-        for (response in mockResponses) {
-            emit(response)
+            for (response in mockResponses) {
+                emit(response)
+            }
         }
-    }
 
     override fun registerFunction(function: LeapFunction) {
         registeredFunctions.add(function)
@@ -119,9 +125,9 @@ class MockConversation(
     }
 }
 
-/// Mock implementation of LeapDownloader for testing.
-/// Note: This is a simplified mock that doesn't implement the actual LeapDownloader interface
-/// since LeapDownloader is a concrete class, not an interface.
+// / Mock implementation of LeapDownloader for testing.
+// / Note: This is a simplified mock that doesn't implement the actual LeapDownloader interface
+// / since LeapDownloader is a concrete class, not an interface.
 class MockLeapDownloader {
     var downloadModelCalled = false
     var loadModelCalled = false
@@ -143,7 +149,7 @@ class MockLeapDownloader {
     suspend fun downloadModel(
         model: String,
         quantization: String,
-        onProgress: (Long, Long) -> Unit
+        onProgress: (Long, Long) -> Unit,
     ) {
         downloadModelCalled = true
         lastDownloadModel = model
@@ -161,7 +167,7 @@ class MockLeapDownloader {
     suspend fun loadModel(
         model: String,
         quantization: String,
-        onProgress: (Long, Long) -> Unit
+        onProgress: (Long, Long) -> Unit,
     ): ModelRunner {
         loadModelCalled = true
         lastLoadModel = model
@@ -178,11 +184,18 @@ class MockLeapDownloader {
         return mockRunner
     }
 
-    fun deleteModelResources(model: String, quantization: String) {
+    fun deleteModelResources(
+        model: String,
+        quantization: String,
+    ) {
         deleteModelResourcesCalled = true
     }
 
-    fun getCachedFilePath(model: String, quantization: String, filename: String): String? {
+    fun getCachedFilePath(
+        model: String,
+        quantization: String,
+        filename: String,
+    ): String? {
         getCachedFilePathCalled = true
         return mockCachedFilePath
     }

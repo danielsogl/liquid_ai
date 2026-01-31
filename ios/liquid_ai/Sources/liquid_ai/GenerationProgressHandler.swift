@@ -7,16 +7,18 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
     private let lock = NSLock()
 
     func onListen(
-        withArguments arguments: Any?,
+        withArguments _: Any?,
         eventSink events: @escaping FlutterEventSink
-    ) -> FlutterError? {
+    )
+        -> FlutterError?
+    {
         lock.lock()
         defer { lock.unlock() }
         eventSink = events
         return nil
     }
 
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    func onCancel(withArguments _: Any?) -> FlutterError? {
         lock.lock()
         defer { lock.unlock() }
         eventSink = nil
@@ -28,7 +30,7 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
         sendEvent([
             "generationId": generationId,
             "type": "chunk",
-            "chunk": chunk
+            "chunk": chunk,
         ])
     }
 
@@ -37,7 +39,7 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
         sendEvent([
             "generationId": generationId,
             "type": "reasoningChunk",
-            "chunk": chunk
+            "chunk": chunk,
         ])
     }
 
@@ -51,7 +53,7 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
             "generationId": generationId,
             "type": "audioSample",
             "audioSamples": samples,
-            "sampleRate": sampleRate
+            "sampleRate": sampleRate,
         ])
     }
 
@@ -63,7 +65,7 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
         sendEvent([
             "generationId": generationId,
             "type": "functionCall",
-            "functionCalls": calls
+            "functionCalls": calls,
         ])
     }
 
@@ -78,9 +80,9 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
             "generationId": generationId,
             "type": "complete",
             "message": message,
-            "finishReason": finishReason
+            "finishReason": finishReason,
         ]
-        if let stats = stats {
+        if let stats {
             event["stats"] = stats
         }
         sendEvent(event)
@@ -91,7 +93,7 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
         sendEvent([
             "generationId": generationId,
             "type": "error",
-            "error": error
+            "error": error,
         ])
     }
 
@@ -99,7 +101,7 @@ final class GenerationProgressHandler: NSObject, FlutterStreamHandler {
     func sendCancelled(generationId: String) {
         sendEvent([
             "generationId": generationId,
-            "type": "cancelled"
+            "type": "cancelled",
         ])
     }
 

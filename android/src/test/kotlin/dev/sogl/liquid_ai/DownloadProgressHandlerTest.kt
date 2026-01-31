@@ -47,7 +47,7 @@ class DownloadProgressHandlerTest {
         handler.sendProgress(
             operationId = "op-123",
             type = OperationType.DOWNLOAD,
-            status = OperationStatus.STARTED
+            status = OperationStatus.STARTED,
         )
 
         // Events list should be empty since sink was not set
@@ -82,7 +82,7 @@ class DownloadProgressHandlerTest {
             type = OperationType.LOAD,
             status = OperationStatus.COMPLETED,
             progress = 1.0,
-            runnerId = runnerId
+            runnerId = runnerId,
         )
     }
 
@@ -95,7 +95,7 @@ class DownloadProgressHandlerTest {
             operationId = operationId,
             type = OperationType.DOWNLOAD,
             status = OperationStatus.ERROR,
-            error = errorMessage
+            error = errorMessage,
         )
     }
 
@@ -104,7 +104,7 @@ class DownloadProgressHandlerTest {
         handler.sendError(
             code = "ERROR_CODE",
             message = "Error message",
-            details = mapOf("key" to "value")
+            details = mapOf("key" to "value"),
         )
     }
 }

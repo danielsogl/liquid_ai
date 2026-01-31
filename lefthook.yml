@@ -1,10 +1,39 @@
 pre-commit:
   parallel: true
   commands:
-    format:
+    # Dart formatting
+    dart-format:
       glob: "*.dart"
       run: dart format {staged_files}
       stage_fixed: true
-    analyze:
+
+    # Dart analysis
+    dart-analyze:
       glob: "*.dart"
       run: dart analyze {staged_files}
+
+    # Swift formatting
+    swift-format:
+      glob: "*.swift"
+      exclude: "ios/liquid_ai/.build/**"
+      run: swiftformat {staged_files}
+      stage_fixed: true
+
+    # Swift linting
+    swift-lint:
+      glob: "*.swift"
+      exclude: "ios/liquid_ai/.build/**"
+      run: swiftlint lint --strict {staged_files}
+
+    # Kotlin formatting
+    kotlin-format:
+      glob: "*.{kt,kts}"
+      exclude: "example/**"
+      run: ktlint --format {staged_files}
+      stage_fixed: true
+
+    # Kotlin linting
+    kotlin-lint:
+      glob: "*.{kt,kts}"
+      exclude: "example/**"
+      run: ktlint {staged_files}

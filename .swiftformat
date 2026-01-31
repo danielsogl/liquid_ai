@@ -1,0 +1,152 @@
+# SwiftFormat Configuration for liquid_ai
+
+# Format version
+--swiftversion 5.9
+
+# File options
+--exclude ios/liquid_ai/.build,example
+
+# Indentation
+--indent 4
+--tabwidth 4
+--smarttabs enabled
+--indentcase false
+--ifdef indent
+
+# Wrapping
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapreturntype if-multiline
+--wrapconditions after-first
+--wrapternary before-operators
+--wraptypealiases before-first
+
+# Spacing
+--operatorfunc spaced
+--ranges spaced
+--typeattributes prev-line
+--funcattributes prev-line
+--varattributes prev-line
+--storedvarattrs same-line
+--computedvarattrs same-line
+
+# Braces
+--allman false
+--elseposition same-line
+--guardelse same-line
+
+# Blank lines
+--trimwhitespace always
+
+# Semicolons
+--semicolons never
+
+# Self
+--self remove
+
+# Imports
+--importgrouping testable-first
+
+# Other
+--commas always
+--decimalgrouping 3,6
+--binarygrouping 4,8
+--octalgrouping 4,8
+--hexgrouping 2,8
+--fractiongrouping disabled
+--exponentgrouping disabled
+--hexliteralcase uppercase
+--exponentcase lowercase
+--header ignore
+--organizetypes class,struct,enum,extension
+--structthreshold 0
+--enumthreshold 0
+--extensionacl on-declarations
+--modifierorder
+--shortoptionals always
+
+# Enable specific rules
+--enable andOperator
+--enable anyObjectProtocol
+--enable blankLineAfterImports
+--enable braces
+--enable conditionalAssignment
+--enable consecutiveSpaces
+--enable duplicateImports
+--enable elseOnSameLine
+--enable emptyBraces
+--enable enumNamespaces
+--enable extensionAccessControl
+--enable fileHeader
+--enable genericExtensions
+--enable hoistAwait
+--enable hoistPatternLet
+--enable hoistTry
+--enable indent
+--enable initCoderUnavailable
+--enable leadingDelimiters
+--enable linebreakAtEndOfFile
+--enable linebreaks
+--enable modifierOrder
+--enable numberFormatting
+--enable opaqueGenericParameters
+--enable preferForLoop
+--enable preferKeyPath
+--enable redundantBackticks
+--enable redundantBreak
+--enable redundantClosure
+--enable redundantExtensionACL
+--enable redundantFileprivate
+--enable redundantGet
+--enable redundantInit
+--enable redundantLet
+--enable redundantLetError
+--enable redundantNilInit
+--enable redundantObjc
+--enable redundantOptionalBinding
+--enable redundantParens
+--enable redundantPattern
+--enable redundantRawValues
+--enable redundantReturn
+--enable redundantSelf
+--enable redundantStaticSelf
+--enable redundantType
+--enable redundantVoidReturnType
+--enable semicolons
+--enable sortImports
+--enable spaceAroundBraces
+--enable spaceAroundBrackets
+--enable spaceAroundComments
+--enable spaceAroundGenerics
+--enable spaceAroundOperators
+--enable spaceAroundParens
+--enable spaceInsideBraces
+--enable spaceInsideBrackets
+--enable spaceInsideComments
+--enable spaceInsideGenerics
+--enable spaceInsideParens
+--enable trailingClosures
+--enable trailingCommas
+--enable trailingSpace
+--enable typeSugar
+--enable unusedArguments
+--enable void
+--enable wrap
+--enable wrapArguments
+--enable wrapAttributes
+--enable wrapConditionalBodies
+--enable wrapEnumCases
+--enable wrapMultilineStatementBraces
+--enable wrapSingleLineComments
+--enable wrapSwitchCases
+--enable yodaConditions
+
+# Disable some rules that may be too aggressive
+--disable blankLinesAtEndOfScope
+--disable blankLinesAtStartOfScope
+--disable blockComments
+--disable isEmpty
+--disable markTypes
+--disable sortSwitchCases

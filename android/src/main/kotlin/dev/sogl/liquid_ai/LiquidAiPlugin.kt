@@ -8,8 +8,10 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import kotlinx.coroutines.*
 
-/// Flutter plugin for Liquid AI with LEAP SDK integration.
-class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
+// / Flutter plugin for Liquid AI with LEAP SDK integration.
+class LiquidAiPlugin :
+    FlutterPlugin,
+    MethodCallHandler {
     private lateinit var channel: MethodChannel
     private lateinit var eventChannel: EventChannel
     private lateinit var generationEventChannel: EventChannel
@@ -29,40 +31,98 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
         generationEventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "liquid_ai/generation")
         generationEventChannel.setStreamHandler(generationProgressHandler)
 
-        modelManager = ModelRunnerManager(
-            progressHandler,
-            flutterPluginBinding.applicationContext
-        )
+        modelManager =
+            ModelRunnerManager(
+                progressHandler,
+                flutterPluginBinding.applicationContext,
+            )
         conversationManager = ConversationManager(generationProgressHandler, modelManager)
     }
 
-    override fun onMethodCall(call: MethodCall, result: Result) {
+    override fun onMethodCall(
+        call: MethodCall,
+        result: Result,
+    ) {
         when (call.method) {
             "getPlatformVersion" -> {
                 result.success("Android ${android.os.Build.VERSION.RELEASE}")
             }
-            "downloadModel" -> handleDownloadModel(call, result)
-            "loadModel" -> handleLoadModel(call, result)
-            "unloadModel" -> handleUnloadModel(call, result)
-            "isModelDownloaded" -> handleIsModelDownloaded(call, result)
-            "deleteModel" -> handleDeleteModel(call, result)
-            "cancelOperation" -> handleCancelOperation(call, result)
-            "getModelStatus" -> handleGetModelStatus(call, result)
+
+            "downloadModel" -> {
+                handleDownloadModel(call, result)
+            }
+
+            "loadModel" -> {
+                handleLoadModel(call, result)
+            }
+
+            "unloadModel" -> {
+                handleUnloadModel(call, result)
+            }
+
+            "isModelDownloaded" -> {
+                handleIsModelDownloaded(call, result)
+            }
+
+            "deleteModel" -> {
+                handleDeleteModel(call, result)
+            }
+
+            "cancelOperation" -> {
+                handleCancelOperation(call, result)
+            }
+
+            "getModelStatus" -> {
+                handleGetModelStatus(call, result)
+            }
+
             // Conversation Management
-            "createConversation" -> handleCreateConversation(call, result)
-            "createConversationFromHistory" -> handleCreateConversationFromHistory(call, result)
-            "getConversationHistory" -> handleGetConversationHistory(call, result)
-            "disposeConversation" -> handleDisposeConversation(call, result)
-            "exportConversation" -> handleExportConversation(call, result)
+            "createConversation" -> {
+                handleCreateConversation(call, result)
+            }
+
+            "createConversationFromHistory" -> {
+                handleCreateConversationFromHistory(call, result)
+            }
+
+            "getConversationHistory" -> {
+                handleGetConversationHistory(call, result)
+            }
+
+            "disposeConversation" -> {
+                handleDisposeConversation(call, result)
+            }
+
+            "exportConversation" -> {
+                handleExportConversation(call, result)
+            }
+
             // Generation
-            "generateResponse" -> handleGenerateResponse(call, result)
-            "stopGeneration" -> handleStopGeneration(call, result)
+            "generateResponse" -> {
+                handleGenerateResponse(call, result)
+            }
+
+            "stopGeneration" -> {
+                handleStopGeneration(call, result)
+            }
+
             // Function Calling
-            "registerFunction" -> handleRegisterFunction(call, result)
-            "provideFunctionResult" -> handleProvideFunctionResult(call, result)
+            "registerFunction" -> {
+                handleRegisterFunction(call, result)
+            }
+
+            "provideFunctionResult" -> {
+                handleProvideFunctionResult(call, result)
+            }
+
             // Token Counting
-            "getTokenCount" -> handleGetTokenCount(call, result)
-            else -> result.notImplemented()
+            "getTokenCount" -> {
+                handleGetTokenCount(call, result)
+            }
+
+            else -> {
+                result.notImplemented()
+            }
         }
     }
 
@@ -77,7 +137,10 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
 
     // MARK: - Method Handlers
 
-    private fun handleDownloadModel(call: MethodCall, result: Result) {
+    private fun handleDownloadModel(
+        call: MethodCall,
+        result: Result,
+    ) {
         val model = call.argument<String>("model")
         val quantization = call.argument<String>("quantization")
 
@@ -85,20 +148,24 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: model, quantization",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
-            val operationId = withContext(Dispatchers.IO) {
-                modelManager.downloadModel(model, quantization)
-            }
+            val operationId =
+                withContext(Dispatchers.IO) {
+                    modelManager.downloadModel(model, quantization)
+                }
             result.success(operationId)
         }
     }
 
-    private fun handleLoadModel(call: MethodCall, result: Result) {
+    private fun handleLoadModel(
+        call: MethodCall,
+        result: Result,
+    ) {
         val model = call.argument<String>("model")
         val quantization = call.argument<String>("quantization")
 
@@ -106,40 +173,48 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: model, quantization",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
-            val operationId = withContext(Dispatchers.IO) {
-                modelManager.loadModel(model, quantization)
-            }
+            val operationId =
+                withContext(Dispatchers.IO) {
+                    modelManager.loadModel(model, quantization)
+                }
             result.success(operationId)
         }
     }
 
-    private fun handleUnloadModel(call: MethodCall, result: Result) {
+    private fun handleUnloadModel(
+        call: MethodCall,
+        result: Result,
+    ) {
         val runnerId = call.argument<String>("runnerId")
 
         if (runnerId == null) {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required argument: runnerId",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
-            val success = withContext(Dispatchers.IO) {
-                modelManager.unloadModel(runnerId)
-            }
+            val success =
+                withContext(Dispatchers.IO) {
+                    modelManager.unloadModel(runnerId)
+                }
             result.success(success)
         }
     }
 
-    private fun handleIsModelDownloaded(call: MethodCall, result: Result) {
+    private fun handleIsModelDownloaded(
+        call: MethodCall,
+        result: Result,
+    ) {
         val model = call.argument<String>("model")
         val quantization = call.argument<String>("quantization")
 
@@ -147,20 +222,24 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: model, quantization",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
-            val isDownloaded = withContext(Dispatchers.IO) {
-                modelManager.isModelDownloaded(model, quantization)
-            }
+            val isDownloaded =
+                withContext(Dispatchers.IO) {
+                    modelManager.isModelDownloaded(model, quantization)
+                }
             result.success(isDownloaded)
         }
     }
 
-    private fun handleDeleteModel(call: MethodCall, result: Result) {
+    private fun handleDeleteModel(
+        call: MethodCall,
+        result: Result,
+    ) {
         val model = call.argument<String>("model")
         val quantization = call.argument<String>("quantization")
 
@@ -168,7 +247,7 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: model, quantization",
-                null
+                null,
             )
             return
         }
@@ -183,20 +262,23 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
                 result.error(
                     "DELETE_FAILED",
                     e.message ?: "Delete failed",
-                    null
+                    null,
                 )
             }
         }
     }
 
-    private fun handleCancelOperation(call: MethodCall, result: Result) {
+    private fun handleCancelOperation(
+        call: MethodCall,
+        result: Result,
+    ) {
         val operationId = call.argument<String>("operationId")
 
         if (operationId == null) {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required argument: operationId",
-                null
+                null,
             )
             return
         }
@@ -205,7 +287,10 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
         result.success(null)
     }
 
-    private fun handleGetModelStatus(call: MethodCall, result: Result) {
+    private fun handleGetModelStatus(
+        call: MethodCall,
+        result: Result,
+    ) {
         val model = call.argument<String>("model")
         val quantization = call.argument<String>("quantization")
 
@@ -213,29 +298,33 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: model, quantization",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
-            val status = withContext(Dispatchers.IO) {
-                modelManager.getModelStatus(model, quantization)
-            }
+            val status =
+                withContext(Dispatchers.IO) {
+                    modelManager.getModelStatus(model, quantization)
+                }
             result.success(status)
         }
     }
 
     // MARK: - Conversation Handlers
 
-    private fun handleCreateConversation(call: MethodCall, result: Result) {
+    private fun handleCreateConversation(
+        call: MethodCall,
+        result: Result,
+    ) {
         val runnerId = call.argument<String>("runnerId")
 
         if (runnerId == null) {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required argument: runnerId",
-                null
+                null,
             )
             return
         }
@@ -244,22 +333,27 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
 
         scope.launch {
             try {
-                val conversationId = withContext(Dispatchers.IO) {
-                    conversationManager.createConversation(runnerId, systemPrompt)
-                }
+                val conversationId =
+                    withContext(Dispatchers.IO) {
+                        conversationManager.createConversation(runnerId, systemPrompt)
+                    }
                 result.success(conversationId)
             } catch (e: Exception) {
                 result.error(
                     "CREATE_FAILED",
                     e.message ?: "Create conversation failed",
-                    null
+                    null,
                 )
             }
         }
     }
 
-    private fun handleCreateConversationFromHistory(call: MethodCall, result: Result) {
+    private fun handleCreateConversationFromHistory(
+        call: MethodCall,
+        result: Result,
+    ) {
         val runnerId = call.argument<String>("runnerId")
+
         @Suppress("UNCHECKED_CAST")
         val history = call.argument<List<Map<String, Any>>>("history")
 
@@ -267,63 +361,71 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: runnerId, history",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
             try {
-                val conversationId = withContext(Dispatchers.IO) {
-                    conversationManager.createConversationFromHistory(runnerId, history)
-                }
+                val conversationId =
+                    withContext(Dispatchers.IO) {
+                        conversationManager.createConversationFromHistory(runnerId, history)
+                    }
                 result.success(conversationId)
             } catch (e: Exception) {
                 result.error(
                     "CREATE_FAILED",
                     e.message ?: "Create conversation failed",
-                    null
+                    null,
                 )
             }
         }
     }
 
-    private fun handleGetConversationHistory(call: MethodCall, result: Result) {
+    private fun handleGetConversationHistory(
+        call: MethodCall,
+        result: Result,
+    ) {
         val conversationId = call.argument<String>("conversationId")
 
         if (conversationId == null) {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required argument: conversationId",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
             try {
-                val history = withContext(Dispatchers.IO) {
-                    conversationManager.getHistory(conversationId)
-                }
+                val history =
+                    withContext(Dispatchers.IO) {
+                        conversationManager.getHistory(conversationId)
+                    }
                 result.success(history)
             } catch (e: Exception) {
                 result.error(
                     "GET_HISTORY_FAILED",
                     e.message ?: "Get history failed",
-                    null
+                    null,
                 )
             }
         }
     }
 
-    private fun handleDisposeConversation(call: MethodCall, result: Result) {
+    private fun handleDisposeConversation(
+        call: MethodCall,
+        result: Result,
+    ) {
         val conversationId = call.argument<String>("conversationId")
 
         if (conversationId == null) {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required argument: conversationId",
-                null
+                null,
             )
             return
         }
@@ -332,29 +434,33 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
         result.success(null)
     }
 
-    private fun handleExportConversation(call: MethodCall, result: Result) {
+    private fun handleExportConversation(
+        call: MethodCall,
+        result: Result,
+    ) {
         val conversationId = call.argument<String>("conversationId")
 
         if (conversationId == null) {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required argument: conversationId",
-                null
+                null,
             )
             return
         }
 
         scope.launch {
             try {
-                val json = withContext(Dispatchers.IO) {
-                    conversationManager.exportConversation(conversationId)
-                }
+                val json =
+                    withContext(Dispatchers.IO) {
+                        conversationManager.exportConversation(conversationId)
+                    }
                 result.success(json)
             } catch (e: Exception) {
                 result.error(
                     "EXPORT_FAILED",
                     e.message ?: "Export failed",
-                    null
+                    null,
                 )
             }
         }
@@ -362,8 +468,12 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
 
     // MARK: - Generation Handlers
 
-    private fun handleGenerateResponse(call: MethodCall, result: Result) {
+    private fun handleGenerateResponse(
+        call: MethodCall,
+        result: Result,
+    ) {
         val conversationId = call.argument<String>("conversationId")
+
         @Suppress("UNCHECKED_CAST")
         val message = call.argument<Map<String, Any>>("message")
 
@@ -371,7 +481,7 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: conversationId, message",
-                null
+                null,
             )
             return
         }
@@ -381,28 +491,32 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
 
         scope.launch {
             try {
-                val generationId = withContext(Dispatchers.IO) {
-                    conversationManager.generateResponse(conversationId, message, options)
-                }
+                val generationId =
+                    withContext(Dispatchers.IO) {
+                        conversationManager.generateResponse(conversationId, message, options)
+                    }
                 result.success(generationId)
             } catch (e: Exception) {
                 result.error(
                     "GENERATION_FAILED",
                     e.message ?: "Generation failed",
-                    null
+                    null,
                 )
             }
         }
     }
 
-    private fun handleStopGeneration(call: MethodCall, result: Result) {
+    private fun handleStopGeneration(
+        call: MethodCall,
+        result: Result,
+    ) {
         val generationId = call.argument<String>("generationId")
 
         if (generationId == null) {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required argument: generationId",
-                null
+                null,
             )
             return
         }
@@ -413,8 +527,12 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
 
     // MARK: - Function Calling Handlers
 
-    private fun handleRegisterFunction(call: MethodCall, result: Result) {
+    private fun handleRegisterFunction(
+        call: MethodCall,
+        result: Result,
+    ) {
         val conversationId = call.argument<String>("conversationId")
+
         @Suppress("UNCHECKED_CAST")
         val function = call.argument<Map<String, Any>>("function")
 
@@ -422,7 +540,7 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: conversationId, function",
-                null
+                null,
             )
             return
         }
@@ -434,13 +552,17 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "REGISTER_FAILED",
                 e.message ?: "Register function failed",
-                null
+                null,
             )
         }
     }
 
-    private fun handleProvideFunctionResult(call: MethodCall, result: Result) {
+    private fun handleProvideFunctionResult(
+        call: MethodCall,
+        result: Result,
+    ) {
         val conversationId = call.argument<String>("conversationId")
+
         @Suppress("UNCHECKED_CAST")
         val functionResult = call.argument<Map<String, Any>>("result")
 
@@ -448,7 +570,7 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "INVALID_ARGUMENTS",
                 "Missing required arguments: conversationId, result",
-                null
+                null,
             )
             return
         }
@@ -460,19 +582,22 @@ class LiquidAiPlugin : FlutterPlugin, MethodCallHandler {
             result.error(
                 "FUNCTION_RESULT_FAILED",
                 e.message ?: "Provide function result failed",
-                null
+                null,
             )
         }
     }
 
     // MARK: - Token Counting
 
-    private fun handleGetTokenCount(call: MethodCall, result: Result) {
+    private fun handleGetTokenCount(
+        call: MethodCall,
+        result: Result,
+    ) {
         // Token counting API is not available on Android SDK
         result.error(
             "UNSUPPORTED",
             "Token counting is not supported on Android. This feature is only available on iOS.",
-            null
+            null,
         )
     }
 }

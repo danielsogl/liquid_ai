@@ -70,13 +70,14 @@ class GenerationProgressHandlerTest {
     @Test
     fun `sendFunctionCalls creates correct event structure`() {
         val generationId = "gen-123"
-        val calls = listOf(
-            mapOf(
-                "id" to "call_0",
-                "name" to "get_weather",
-                "arguments" to mapOf("location" to "London")
+        val calls =
+            listOf(
+                mapOf(
+                    "id" to "call_0",
+                    "name" to "get_weather",
+                    "arguments" to mapOf("location" to "London"),
+                ),
             )
-        )
 
         handler.sendFunctionCalls(generationId, calls)
     }
@@ -84,16 +85,18 @@ class GenerationProgressHandlerTest {
     @Test
     fun `sendComplete creates correct event structure with stats`() {
         val generationId = "gen-123"
-        val message = mapOf(
-            "role" to "assistant",
-            "content" to listOf(mapOf("type" to "text", "text" to "Hello World!"))
-        )
+        val message =
+            mapOf(
+                "role" to "assistant",
+                "content" to listOf(mapOf("type" to "text", "text" to "Hello World!")),
+            )
         val finishReason = "stop"
-        val stats = mapOf(
-            "tokenCount" to 10,
-            "tokensPerSecond" to 25.5,
-            "generationTimeMs" to 400
-        )
+        val stats =
+            mapOf(
+                "tokenCount" to 10,
+                "tokensPerSecond" to 25.5,
+                "generationTimeMs" to 400,
+            )
 
         handler.sendComplete(generationId, message, finishReason, stats)
     }
@@ -101,10 +104,11 @@ class GenerationProgressHandlerTest {
     @Test
     fun `sendComplete works without stats`() {
         val generationId = "gen-123"
-        val message = mapOf(
-            "role" to "assistant",
-            "content" to listOf(mapOf("type" to "text", "text" to "Hello"))
-        )
+        val message =
+            mapOf(
+                "role" to "assistant",
+                "content" to listOf(mapOf("type" to "text", "text" to "Hello")),
+            )
 
         handler.sendComplete(generationId, message, "stop", null)
     }

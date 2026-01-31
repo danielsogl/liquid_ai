@@ -3,7 +3,7 @@ package dev.sogl.liquid_ai.mocks
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
-/// Mock implementation of MethodChannel.Result for testing.
+// / Mock implementation of MethodChannel.Result for testing.
 class MockMethodResult : MethodChannel.Result {
     var successValue: Any? = null
     var errorCode: String? = null
@@ -15,7 +15,11 @@ class MockMethodResult : MethodChannel.Result {
         successValue = result
     }
 
-    override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+    override fun error(
+        errorCode: String,
+        errorMessage: String?,
+        errorDetails: Any?,
+    ) {
         this.errorCode = errorCode
         this.errorMessage = errorMessage
         this.errorDetails = errorDetails
@@ -34,7 +38,7 @@ class MockMethodResult : MethodChannel.Result {
     }
 }
 
-/// Mock implementation of EventChannel.EventSink for testing.
+// / Mock implementation of EventChannel.EventSink for testing.
 class MockEventSink : EventChannel.EventSink {
     val events = mutableListOf<Any?>()
     var errorCode: String? = null
@@ -46,7 +50,11 @@ class MockEventSink : EventChannel.EventSink {
         events.add(event)
     }
 
-    override fun error(errorCode: String?, errorMessage: String?, errorDetails: Any?) {
+    override fun error(
+        errorCode: String?,
+        errorMessage: String?,
+        errorDetails: Any?,
+    ) {
         this.errorCode = errorCode
         this.errorMessage = errorMessage
         this.errorDetails = errorDetails

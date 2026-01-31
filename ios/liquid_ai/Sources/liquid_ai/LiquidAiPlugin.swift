@@ -1,7 +1,7 @@
 import Flutter
-import UIKit
-import LeapSDK
 import LeapModelDownloader
+import LeapSDK
+import UIKit
 
 /// Flutter plugin for Liquid AI with LEAP SDK integration.
 public class LiquidAiPlugin: NSObject, FlutterPlugin {
@@ -103,7 +103,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleDownloadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
-              let quantization = args["quantization"] as? String else {
+              let quantization = args["quantization"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: model, quantization",
@@ -126,7 +127,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleLoadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
-              let quantization = args["quantization"] as? String else {
+              let quantization = args["quantization"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: model, quantization",
@@ -148,7 +150,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleUnloadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let runnerId = args["runnerId"] as? String else {
+              let runnerId = args["runnerId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: runnerId",
@@ -168,7 +171,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleIsModelDownloaded(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
-              let quantization = args["quantization"] as? String else {
+              let quantization = args["quantization"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: model, quantization",
@@ -191,7 +195,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleDeleteModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
-              let quantization = args["quantization"] as? String else {
+              let quantization = args["quantization"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: model, quantization",
@@ -220,7 +225,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleCancelOperation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let operationId = args["operationId"] as? String else {
+              let operationId = args["operationId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: operationId",
@@ -240,7 +246,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleGetModelStatus(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
-              let quantization = args["quantization"] as? String else {
+              let quantization = args["quantization"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: model, quantization",
@@ -256,7 +263,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
             )
             let statusMap: [String: Any] = [
                 "type": status.type.description,
-                "progress": status.progress
+                "progress": status.progress,
             ]
             DispatchQueue.main.async {
                 result(statusMap)
@@ -268,7 +275,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleCreateConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let runnerId = args["runnerId"] as? String else {
+              let runnerId = args["runnerId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: runnerId",
@@ -303,7 +311,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleCreateConversationFromHistory(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let runnerId = args["runnerId"] as? String,
-              let history = args["history"] as? [[String: Any]] else {
+              let history = args["history"] as? [[String: Any]] else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: runnerId, history",
@@ -335,7 +344,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleGetConversationHistory(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let conversationId = args["conversationId"] as? String else {
+              let conversationId = args["conversationId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: conversationId",
@@ -364,7 +374,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleDisposeConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let conversationId = args["conversationId"] as? String else {
+              let conversationId = args["conversationId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: conversationId",
@@ -383,7 +394,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleExportConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let conversationId = args["conversationId"] as? String else {
+              let conversationId = args["conversationId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: conversationId",
@@ -415,7 +427,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleGenerateResponse(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String,
-              let message = args["message"] as? [String: Any] else {
+              let message = args["message"] as? [String: Any] else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: conversationId, message",
@@ -450,7 +463,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleStopGeneration(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let generationId = args["generationId"] as? String else {
+              let generationId = args["generationId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: generationId",
@@ -472,7 +486,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleRegisterFunction(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String,
-              let function = args["function"] as? [String: Any] else {
+              let function = args["function"] as? [String: Any] else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: conversationId, function",
@@ -505,7 +520,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     private func handleProvideFunctionResult(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String,
-              let functionResult = args["result"] as? [String: Any] else {
+              let functionResult = args["result"] as? [String: Any] else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required arguments: conversationId, result",
@@ -539,7 +555,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
 
     private func handleGetTokenCount(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
-              let conversationId = args["conversationId"] as? String else {
+              let conversationId = args["conversationId"] as? String else
+        {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
                 message: "Missing required argument: conversationId",
@@ -573,11 +590,11 @@ extension ModelDownloader.ModelDownloadStatusType {
     var description: String {
         switch self {
         case .notOnLocal:
-            return "notOnLocal"
+            "notOnLocal"
         case .downloadInProgress:
-            return "downloadInProgress"
+            "downloadInProgress"
         case .downloaded:
-            return "downloaded"
+            "downloaded"
         }
     }
 }
