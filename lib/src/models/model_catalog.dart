@@ -108,23 +108,6 @@ const List<LeapModel> leapModelCatalog = [
   ),
 
   // ============================================================
-  // 600M Models - Third-party (Qwen)
-  // ============================================================
-  LeapModel(
-    slug: 'Qwen3-0.6B',
-    name: 'Qwen3-0.6B',
-    description:
-        'Latest generation Qwen model offering groundbreaking advancements '
-        'in reasoning, instruction-following, agent capabilities, and '
-        'multilingual support. Ultra-compact for edge deployment.',
-    parameters: '0.6B',
-    modalities: [ModelModality.text],
-    quantizations: _standardQuantizations,
-    contextLength: 32768,
-    updatedAt: '2025-06-30',
-  ),
-
-  // ============================================================
   // 700M Models - Balanced efficiency
   // ============================================================
   LeapModel(
@@ -266,23 +249,6 @@ const List<LeapModel> leapModelCatalog = [
     quantizations: _standardQuantizations,
     contextLength: 32768,
     updatedAt: '2025-01-06',
-  ),
-
-  // ============================================================
-  // 1.7B Models - Third-party (Qwen)
-  // ============================================================
-  LeapModel(
-    slug: 'Qwen3-1.7B',
-    name: 'Qwen3-1.7B',
-    description:
-        'Latest generation Qwen model offering groundbreaking advancements '
-        'in reasoning, instruction-following, agent capabilities, and '
-        'multilingual support. Balanced size for on-device deployment.',
-    parameters: '1.7B',
-    modalities: [ModelModality.text],
-    quantizations: _standardQuantizations,
-    contextLength: 32768,
-    updatedAt: '2025-06-30',
   ),
 
   // ============================================================
