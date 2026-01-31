@@ -152,6 +152,86 @@ const List<LeapModel> leapModelCatalog = [
     task: ModelTask.summarization,
     updatedAt: '2026-01-07',
   ),
+
+  // Vision Models (VL = Vision-Language)
+  LeapModel(
+    slug: 'LFM2-VL-450M',
+    name: 'LFM2-VL-450M',
+    description:
+        'Ultra-compact vision model for edge deployment. '
+        'Supports basic image captioning and visual question-answering.',
+    parameters: '450M',
+    modalities: [ModelModality.text, ModelModality.image],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2025-09-15',
+  ),
+  LeapModel(
+    slug: 'LFM2-VL-1.6B',
+    name: 'LFM2-VL-1.6B',
+    description:
+        'Vision-language model with improved accuracy over 450M variant. '
+        'Supports image captioning, text recognition, and scene understanding.',
+    parameters: '1.6B',
+    modalities: [ModelModality.text, ModelModality.image],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2025-10-20',
+    isDeprecated: true,
+  ),
+  LeapModel(
+    slug: 'LFM2-VL-3B',
+    name: 'LFM2-VL-3B',
+    description:
+        'Large vision-language model for complex visual reasoning tasks. '
+        'Excellent for detailed image analysis and multi-step visual QA.',
+    parameters: '3B',
+    modalities: [ModelModality.text, ModelModality.image],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2025-11-10',
+  ),
+  LeapModel(
+    slug: 'LFM2.5-VL-1.6B',
+    name: 'LFM2.5-VL-1.6B',
+    description:
+        'Best vision model for most use cases. Fast and accurate. '
+        'Supports image captioning, text recognition, scene understanding, '
+        'and visual question-answering.',
+    parameters: '1.6B',
+    modalities: [ModelModality.text, ModelModality.image],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2026-01-15',
+  ),
+
+  // Audio Models
+  LeapModel(
+    slug: 'LFM2-Audio-1.5B',
+    name: 'LFM2-Audio-1.5B',
+    description:
+        'Audio model for speech synthesis and transcription. '
+        'Supports voice chat and audio-driven interactions.',
+    parameters: '1.5B',
+    modalities: [ModelModality.text, ModelModality.audio],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2025-11-01',
+    isDeprecated: true,
+  ),
+  LeapModel(
+    slug: 'LFM2.5-Audio-1.5B',
+    name: 'LFM2.5-Audio-1.5B',
+    description:
+        'Best audio model for most use cases. Fast, accurate, and CPU-friendly. '
+        'Supports speech synthesis, transcription, voice chat, '
+        'and voice-driven tool use.',
+    parameters: '1.5B',
+    modalities: [ModelModality.text, ModelModality.audio],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2026-01-15',
+  ),
 ];
 
 /// Helper class for querying the model catalog.
