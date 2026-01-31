@@ -80,7 +80,9 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
     try {
       final runner = chatState.runner!;
       final conversation = await runner.createConversation(
-        systemPrompt: 'You are a helpful assistant.',
+        systemPrompt:
+            'You are a helpful assistant that always responds in valid JSON '
+            'format. Never include explanations outside the JSON object.',
       );
 
       final options = const GenerationOptions(
@@ -729,46 +731,49 @@ class _ModelSwitcherSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Switch Model',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Text(
+              'Switch Model',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            const SizedBox(height: 16),
-            ...models.map((model) {
-              final isSelected = model.slug == currentModelSlug;
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: isSelected
-                      ? Theme.of(context).colorScheme.primaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.smart_toy,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.onPrimaryContainer
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: models.length,
+              itemBuilder: (context, index) {
+                final model = models[index];
+                final isSelected = model.slug == currentModelSlug;
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: isSelected
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.smart_toy,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.onPrimaryContainer
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                title: Text(model.name),
-                trailing: isSelected
-                    ? Icon(
-                        Icons.check_circle,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: isSelected ? null : () => onModelSelected(model),
-              );
-            }),
-          ],
-        ),
+                  title: Text(model.name),
+                  trailing: isSelected
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                      : null,
+                  onTap: isSelected ? null : () => onModelSelected(model),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

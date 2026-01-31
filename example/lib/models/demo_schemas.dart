@@ -27,8 +27,13 @@ final recipeSchema =
         .addArray(
           'ingredients',
           'List of ingredients needed',
-          items: const StringProperty(
-            description: 'An ingredient with quantity',
+          items: const ObjectProperty(
+            description: 'An ingredient with name and quantity',
+            properties: {
+              'name': StringProperty(description: 'Name of the ingredient'),
+              'quantity': StringProperty(description: 'Amount needed'),
+            },
+            required: ['name', 'quantity'],
           ),
           minItems: 1,
         )
@@ -94,8 +99,9 @@ final structuredDemos = [
     description: 'Extract structured recipe information',
     schema: recipeSchema,
     samplePrompt:
-        'Give me a structured recipe for chocolate chip cookies with a '
-        'crispy texture.',
+        'Give me a recipe for chocolate chip cookies with a crispy texture. '
+        'Output as JSON with name, description, ingredients, instructions, '
+        'prepTimeMinutes, cookTimeMinutes, and servings.',
   ),
   StructuredDemo(
     title: 'Sentiment Analyzer',
