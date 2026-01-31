@@ -4,11 +4,11 @@ import PackageDescription
 let package = Package(
     name: "liquid_ai",
     platforms: [
-        .iOS("15.0"),
-        .macOS("12.0")
+        .iOS("17.0"),
+        .macOS("14.0"),
     ],
     products: [
-        .library(name: "liquid-ai", targets: ["liquid_ai"])
+        .library(name: "liquid-ai", targets: ["liquid_ai"]),
     ],
     dependencies: [],
     targets: [
@@ -17,7 +17,7 @@ let package = Package(
             dependencies: [
                 "LeapSDK",
                 "LeapModelDownloader",
-                "LeapSDKSupport"
+                "LeapSDKSupport",
             ]
         ),
         // LEAP SDK binary targets
@@ -51,9 +51,9 @@ let package = Package(
             dependencies: [
                 "InferenceEngine",
                 "InferenceEngineExecutorchBackend",
-                "InferenceEngineLlamaCppBackend"
+                "InferenceEngineLlamaCppBackend",
             ],
             path: "Sources/LeapSDKSupport"
-        )
+        ),
     ]
 )

@@ -14,7 +14,7 @@ model inference on iOS and Android.
   s.dependency 'Flutter'
   # Note: For CocoaPods users, Leap-SDK must be added manually to the Podfile.
   # We recommend using Swift Package Manager instead for easier integration.
-  s.platform         = :ios, '15.0'
+  s.platform         = :ios, '17.0'
   s.swift_version    = '5.9'
 
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
