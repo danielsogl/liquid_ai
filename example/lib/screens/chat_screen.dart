@@ -751,6 +751,16 @@ class _MessageBubble extends StatelessWidget {
       );
     }
 
+    // Add stats for assistant messages
+    if (!isUser && message.stats != null && !message.isStreaming) {
+      contentWidgets.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: _StatsView(stats: message.stats!),
+        ),
+      );
+    }
+
     if (contentWidgets.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -763,6 +773,48 @@ class _MessageBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: contentWidgets,
+    );
+  }
+}
+
+class _StatsView extends StatelessWidget {
+  const _StatsView({required this.stats});
+
+  final GenerationStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <String>[];
+
+    // Tokens generated
+    items.add('${stats.tokenCount} tokens');
+
+    // Tokens per second
+    items.add('${stats.tokensPerSecond.toStringAsFixed(1)} tok/s');
+
+    // Prompt tokens if available
+    if (stats.promptTokenCount != null) {
+      items.add('${stats.promptTokenCount} prompt');
+    }
+
+    // Generation time if available
+    if (stats.generationTimeMs != null) {
+      final seconds = stats.generationTimeMs! / 1000;
+      items.add('${seconds.toStringAsFixed(2)}s');
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        items.join(' · '),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.outline,
+        ),
+      ),
     );
   }
 }

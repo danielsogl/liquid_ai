@@ -9,11 +9,15 @@ class ChatMessageUI {
     required this.role,
     required this.content,
     this.isStreaming = false,
+    this.stats,
   });
 
   final ChatMessageRole role;
   final List<ChatMessageContent> content;
   final bool isStreaming;
+
+  /// Generation statistics (only for assistant messages).
+  final GenerationStats? stats;
 
   /// Returns the text content of this message, if any.
   String? get text {
@@ -39,11 +43,13 @@ class ChatMessageUI {
     ChatMessageRole? role,
     List<ChatMessageContent>? content,
     bool? isStreaming,
+    GenerationStats? stats,
   }) {
     return ChatMessageUI(
       role: role ?? this.role,
       content: content ?? this.content,
       isStreaming: isStreaming ?? this.isStreaming,
+      stats: stats ?? this.stats,
     );
   }
 }
@@ -209,6 +215,7 @@ class ChatState extends ChangeNotifier {
                 _updateLastMessage(
                   event.message.text ?? buffer.toString(),
                   isStreaming: false,
+                  stats: event.stats,
                 );
                 _isGenerating = false;
                 _generationSubscription = null;
@@ -271,7 +278,11 @@ class ChatState extends ChangeNotifier {
     return _conversation?.export();
   }
 
-  void _updateLastMessage(String textContent, {required bool isStreaming}) {
+  void _updateLastMessage(
+    String textContent, {
+    required bool isStreaming,
+    GenerationStats? stats,
+  }) {
     if (_messages.isEmpty) return;
 
     final lastIndex = _messages.length - 1;
@@ -281,6 +292,7 @@ class ChatState extends ChangeNotifier {
     _messages[lastIndex] = _messages[lastIndex].copyWith(
       content: newContent,
       isStreaming: isStreaming,
+      stats: stats,
     );
     notifyListeners();
   }
