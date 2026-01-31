@@ -154,8 +154,13 @@ class ChatState extends ChangeNotifier {
       await stopGeneration();
     }
 
-    // Dispose old conversation but keep messages
+    // Dispose old conversation
     await _conversation?.dispose();
+    _conversation = null;
+
+    // Dispose old runner to free memory before loading new one
+    await _runner?.dispose();
+    _runner = null;
 
     await initialize(
       runner,
