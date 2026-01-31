@@ -177,11 +177,7 @@ class ToolsState extends ChangeNotifier {
 
   /// Sends a message and handles the response.
   Future<void> sendMessage(String text) async {
-    debugPrint('[ToolsState] sendMessage called with: $text');
-    if (!isReady || _isGenerating) {
-      debugPrint('[ToolsState] sendMessage blocked - isReady: $isReady, isGenerating: $_isGenerating');
-      return;
-    }
+    if (!isReady || _isGenerating) return;
     if (text.trim().isEmpty) return;
 
     // Add user message
@@ -191,9 +187,7 @@ class ToolsState extends ChangeNotifier {
     notifyListeners();
 
     final message = ChatMessage.user(text);
-    debugPrint('[ToolsState] Starting generation with user message');
     await _generateWithFunctionHandling(message);
-    debugPrint('[ToolsState] sendMessage completed');
   }
 
   /// Generates a response and handles function calls following the SDK pattern.
@@ -204,9 +198,6 @@ class ToolsState extends ChangeNotifier {
   /// 3. Send results back via ChatMessage.tool()
   /// 4. Continue generation to get final response
   Future<void> _generateWithFunctionHandling(ChatMessage message) async {
-    debugPrint('[ToolsState] _generateWithFunctionHandling called');
-    debugPrint('[ToolsState] Message role: ${message.role}, content: ${message.text}');
-
     // Only add assistant placeholder for non-tool messages
     if (message.role != ChatMessageRole.tool) {
       _messages.add(
@@ -223,24 +214,19 @@ class ToolsState extends ChangeNotifier {
     List<LeapFunctionCall>? pendingFunctionCalls;
 
     try {
-      debugPrint('[ToolsState] Starting generation');
       await for (final event in _conversation!.generateResponse(message)) {
-        debugPrint('[ToolsState] Received event: ${event.runtimeType}');
-
         switch (event) {
           case GenerationChunkEvent():
             buffer.write(event.chunk);
             _updateLastMessage(buffer.toString(), isStreaming: true);
 
           case GenerationFunctionCallEvent():
-            debugPrint('[ToolsState] Function calls received: ${event.functionCalls.length}');
             // Remove empty assistant placeholder
             _removeLastAssistantMessageIfEmpty();
             // Store function calls to process after stream completes
             pendingFunctionCalls = event.functionCalls;
 
           case GenerationCompleteEvent():
-            debugPrint('[ToolsState] Generation complete');
             final responseText = event.message.text ?? buffer.toString();
 
             if (pendingFunctionCalls != null) {
@@ -262,13 +248,11 @@ class ToolsState extends ChangeNotifier {
             }
 
           case GenerationErrorEvent():
-            debugPrint('[ToolsState] Error: ${event.error}');
             _updateLastMessage('Error: ${event.error}', isStreaming: false);
             _isGenerating = false;
             notifyListeners();
 
           case GenerationCancelledEvent():
-            debugPrint('[ToolsState] Cancelled');
             _updateLastMessage(buffer.toString(), isStreaming: false);
             _isGenerating = false;
             notifyListeners();
@@ -277,8 +261,7 @@ class ToolsState extends ChangeNotifier {
             break;
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint('[ToolsState] Error: $e\n$stackTrace');
+    } catch (e) {
       _updateLastMessage('Error: $e', isStreaming: false);
       _isGenerating = false;
       notifyListeners();
@@ -292,8 +275,6 @@ class ToolsState extends ChangeNotifier {
   /// 2. Provide results back to conversation history
   /// 3. Send continuation message to get natural language response
   Future<void> _processFunctionCalls(List<LeapFunctionCall> calls) async {
-    debugPrint('[ToolsState] Processing ${calls.length} function calls');
-
     final results = <String>[];
 
     for (final call in calls) {
@@ -310,7 +291,6 @@ class ToolsState extends ChangeNotifier {
 
       // Execute the function
       final result = await _executeFunction(call);
-      debugPrint('[ToolsState] ${call.name} returned: $result');
 
       // Add function result UI message
       _messages.add(
@@ -338,19 +318,8 @@ class ToolsState extends ChangeNotifier {
       'Please provide a helpful response to the user based on these results.',
     );
 
-    debugPrint('[ToolsState] Sending continuation message');
-
-    // Add placeholder for the model's response
-    _messages.add(
-      const ToolsMessageUI(
-        type: ToolsMessageType.assistant,
-        content: '',
-        isStreaming: true,
-      ),
-    );
-    notifyListeners();
-
-    // Continue generation - this should produce natural language, not another tool call
+    // Continue generation - _generateWithFunctionHandling will add the
+    // assistant placeholder since this is a user message
     await _generateWithFunctionHandling(continuationMessage);
   }
 
