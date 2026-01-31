@@ -53,9 +53,12 @@ class ModelState {
 
 /// Manages download state for all models.
 class DownloadState extends ChangeNotifier {
-  DownloadState({LiquidAi? liquidAi}) : _liquidAi = liquidAi ?? LiquidAi();
+  DownloadState({LiquidAi? liquidAi, ModelManager? modelManager})
+    : _liquidAi = liquidAi ?? LiquidAi(),
+      _modelManager = modelManager ?? ModelManager.instance;
 
   final LiquidAi _liquidAi;
+  final ModelManager _modelManager;
   final Map<String, ModelState> _modelStates = {};
   final Map<String, StreamSubscription<DownloadEvent>> _subscriptions = {};
 
@@ -329,7 +332,9 @@ class DownloadState extends ChangeNotifier {
 
   /// Loads a model into memory and returns a [ModelRunner].
   ///
-  /// This is used to get a runner that can be used for inference.
+  /// This uses the [ModelManager] singleton which automatically unloads
+  /// any previously loaded model before loading the new one, preventing
+  /// memory issues on native devices.
   Future<ModelRunner?> loadModel(String modelSlug, String quantization) async {
     if (_loadStatus == ModelLoadStatus.loading) {
       return null;
@@ -342,7 +347,8 @@ class DownloadState extends ChangeNotifier {
 
     final completer = Completer<ModelRunner?>();
 
-    final stream = _liquidAi.loadModel(modelSlug, quantization);
+    // Use ModelManager to ensure only one model is loaded at a time
+    final stream = _modelManager.loadModel(modelSlug, quantization);
     StreamSubscription<LoadEvent>? subscription;
 
     subscription = stream.listen(

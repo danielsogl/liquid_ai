@@ -145,8 +145,8 @@ class ChatState extends ChangeNotifier {
   /// Note: The new model won't have the previous conversation context,
   /// but the UI will still show the message history.
   ///
-  /// The old runner should be disposed BEFORE calling this method to avoid
-  /// having both models in memory simultaneously.
+  /// When using [ModelManager] (recommended), the old runner is automatically
+  /// unloaded when loading the new model, so no manual disposal is needed.
   Future<void> switchModel(
     ModelRunner runner, {
     LeapModel? model,
@@ -157,12 +157,11 @@ class ChatState extends ChangeNotifier {
       await stopGeneration();
     }
 
-    // Dispose old conversation
+    // Dispose old conversation (not the runner - ModelManager handles that)
     await _conversation?.dispose();
     _conversation = null;
 
-    // Clear reference (runner should already be disposed by caller to free
-    // memory before loading new model)
+    // Clear reference - the runner lifecycle is managed by ModelManager
     _runner = null;
 
     await initialize(
@@ -336,6 +335,9 @@ class ChatState extends ChangeNotifier {
   /// Resets the chat state, clearing the runner and conversation.
   ///
   /// This is useful after a hot reload when the native runner becomes invalid.
+  /// Note: This does not dispose the runner since [ModelManager] manages
+  /// the model lifecycle. Use [ModelManager.unloadCurrentModel] to explicitly
+  /// unload the model.
   void reset() {
     _generationSubscription?.cancel();
     _generationSubscription = null;

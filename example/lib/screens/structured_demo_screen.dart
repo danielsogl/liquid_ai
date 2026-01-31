@@ -427,10 +427,8 @@ Important:
       return;
     }
 
-    // Dispose old runner BEFORE loading new one to avoid having both models
-    // in memory simultaneously, which can exceed memory limits
-    await chatState.runner?.dispose();
-
+    // ModelManager automatically unloads the previous model before loading
+    // the new one, preventing memory issues on native devices
     final runner = await downloadState.loadModel(model.slug, quant.slug);
 
     if (runner != null) {
@@ -441,7 +439,7 @@ Important:
         ).showSnackBar(SnackBar(content: Text('Switched to ${model.name}')));
       }
     } else if (mounted) {
-      // Reset state since we disposed the old runner but failed to load new one
+      // Reset state since the load failed
       chatState.reset();
       final error = downloadState.loadErrorMessage ?? 'Failed to load model';
       ScaffoldMessenger.of(

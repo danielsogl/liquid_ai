@@ -16,6 +16,7 @@ export 'src/models/leap_function.dart';
 export 'src/models/leap_model.dart';
 export 'src/models/load_event.dart';
 export 'src/models/model_catalog.dart';
+export 'src/models/model_manager.dart';
 export 'src/models/model_runner.dart';
 export 'src/models/model_status.dart';
 export 'src/models/structured_generation.dart';

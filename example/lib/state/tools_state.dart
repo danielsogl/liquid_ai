@@ -166,13 +166,19 @@ class ToolsState extends ChangeNotifier {
   }
 
   /// Switches to a different model.
+  ///
+  /// When using [ModelManager] (recommended), the old runner is automatically
+  /// unloaded when loading the new model, so no manual disposal is needed.
   Future<void> switchModel(ModelRunner runner, {LeapModel? model}) async {
     if (_isGenerating) {
       await stopGeneration();
     }
 
+    // Dispose old conversation (not the runner - ModelManager handles that)
     await _conversation?.dispose();
     _conversation = null;
+
+    // Clear reference - the runner lifecycle is managed by ModelManager
     _runner = null;
 
     await initialize(runner, model: model);
@@ -589,7 +595,11 @@ class ToolsState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Resets the tools state.
+  /// Resets the tools state, clearing the runner and conversation.
+  ///
+  /// Note: This does not dispose the runner since [ModelManager] manages
+  /// the model lifecycle. Use [ModelManager.unloadCurrentModel] to explicitly
+  /// unload the model.
   void reset() {
     _runner = null;
     _conversation = null;
