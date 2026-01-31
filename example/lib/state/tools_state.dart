@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:liquid_ai/liquid_ai.dart';
 
 /// Represents a message in the tools demo chat UI.
@@ -83,12 +84,14 @@ Always use tools when appropriate rather than making up answers.
 final List<LeapFunction> _demoFunctions = [
   LeapFunction.withSchema(
     name: 'get_weather',
-    description: 'Get the current weather for a specified location.',
+    description:
+        'Get the current weather for a location. Returns temperature, '
+        'feels-like temperature, humidity, wind speed, gusts, and conditions.',
     schema: JsonSchema.object('Weather request parameters')
         .addString('location', 'The city name, e.g., "New York" or "London"')
         .addString(
           'unit',
-          'Temperature unit',
+          'Temperature unit (default: celsius)',
           required: false,
           enumValues: ['celsius', 'fahrenheit'],
         )
@@ -383,7 +386,7 @@ class ToolsState extends ChangeNotifier {
   Future<String> _executeFunction(LeapFunctionCall call) async {
     switch (call.name) {
       case 'get_weather':
-        return _getWeather(call.arguments);
+        return await _getWeather(call.arguments);
       case 'calculate':
         return _calculate(call.arguments);
       default:
@@ -391,30 +394,120 @@ class ToolsState extends ChangeNotifier {
     }
   }
 
-  /// Mock implementation of get_weather function.
-  String _getWeather(Map<String, dynamic> args) {
+  /// Fetches real weather data from Open-Meteo API.
+  Future<String> _getWeather(Map<String, dynamic> args) async {
     final location = args['location'] as String? ?? 'Unknown';
-    final unit = args['unit'] as String? ?? 'celsius';
+    final isFahrenheit = args['unit'] == 'fahrenheit';
 
-    // Generate mock weather data
-    final random = Random();
-    final tempC = random.nextInt(30) + 5; // 5-35°C
-    final temp = unit == 'fahrenheit' ? (tempC * 9 / 5 + 32).round() : tempC;
-    final conditions = [
-      'sunny',
-      'cloudy',
-      'partly cloudy',
-      'rainy',
-    ][random.nextInt(4)];
-    final humidity = random.nextInt(60) + 30; // 30-90%
+    try {
+      // Geocode the location to get coordinates
+      final geo = await _geocodeLocation(location);
+      if (geo == null) {
+        return json.encode({'error': 'Location not found: $location'});
+      }
 
-    return json.encode({
-      'location': location,
-      'temperature': temp,
-      'unit': unit == 'fahrenheit' ? '°F' : '°C',
-      'conditions': conditions,
-      'humidity': '$humidity%',
-    });
+      // Fetch weather data using coordinates
+      final weather = await _fetchWeather(
+        geo['lat'] as double,
+        geo['lon'] as double,
+        isFahrenheit: isFahrenheit,
+      );
+      if (weather == null) {
+        return json.encode({'error': 'Failed to fetch weather data'});
+      }
+
+      final tempUnit = isFahrenheit ? '°F' : '°C';
+      final speedUnit = isFahrenheit ? 'mph' : 'km/h';
+
+      return json.encode({
+        'location': geo['name'],
+        'conditions': _getWeatherCondition(weather['code'] as int),
+        'temperature': '${weather['temp']}$tempUnit',
+        'feelsLike': '${weather['feelsLike']}$tempUnit',
+        'humidity': '${weather['humidity']}%',
+        'wind': '${weather['windSpeed']} $speedUnit',
+        'gusts': '${weather['windGusts']} $speedUnit',
+      });
+    } catch (e) {
+      return json.encode({'error': 'Weather fetch failed: $e'});
+    }
+  }
+
+  /// Geocodes a location name to coordinates.
+  Future<Map<String, dynamic>?> _geocodeLocation(String location) async {
+    final url = Uri.parse(
+      'https://geocoding-api.open-meteo.com/v1/search'
+      '?name=${Uri.encodeComponent(location)}&count=1',
+    );
+    final response = await http.get(url);
+    if (response.statusCode != 200) return null;
+
+    final data = json.decode(response.body) as Map<String, dynamic>;
+    final results = data['results'] as List<dynamic>?;
+    if (results == null || results.isEmpty) return null;
+
+    final place = results[0] as Map<String, dynamic>;
+    final name = place['name'] as String;
+    final country = place['country'] as String? ?? '';
+
+    return {
+      'lat': place['latitude'] as double,
+      'lon': place['longitude'] as double,
+      'name': country.isNotEmpty ? '$name, $country' : name,
+    };
+  }
+
+  /// Fetches current weather for given coordinates.
+  Future<Map<String, dynamic>?> _fetchWeather(
+    double lat,
+    double lon, {
+    bool isFahrenheit = false,
+  }) async {
+    final tempUnit = isFahrenheit ? 'fahrenheit' : 'celsius';
+    final windUnit = isFahrenheit ? 'mph' : 'kmh';
+    final url = Uri.parse(
+      'https://api.open-meteo.com/v1/forecast'
+      '?latitude=$lat&longitude=$lon'
+      '&current=temperature_2m,apparent_temperature,relative_humidity_2m,'
+      'wind_speed_10m,wind_gusts_10m,weather_code'
+      '&temperature_unit=$tempUnit&wind_speed_unit=$windUnit',
+    );
+    final response = await http.get(url);
+    if (response.statusCode != 200) return null;
+
+    final data = json.decode(response.body) as Map<String, dynamic>;
+    final current = data['current'] as Map<String, dynamic>;
+
+    return {
+      'temp': (current['temperature_2m'] as num).round(),
+      'feelsLike': (current['apparent_temperature'] as num).round(),
+      'humidity': (current['relative_humidity_2m'] as num).round(),
+      'windSpeed': (current['wind_speed_10m'] as num).round(),
+      'windGusts': (current['wind_gusts_10m'] as num).round(),
+      'code': current['weather_code'] as int,
+    };
+  }
+
+  /// Maps Open-Meteo weather codes to human-readable conditions.
+  String _getWeatherCondition(int code) {
+    return switch (code) {
+      0 => 'Clear sky',
+      1 => 'Mainly clear',
+      2 => 'Partly cloudy',
+      3 => 'Overcast',
+      45 || 48 => 'Foggy',
+      51 || 53 || 55 => 'Drizzle',
+      56 || 57 => 'Freezing drizzle',
+      61 || 63 || 65 => 'Rain',
+      66 || 67 => 'Freezing rain',
+      71 || 73 || 75 => 'Snow',
+      77 => 'Snow grains',
+      80 || 81 || 82 => 'Rain showers',
+      85 || 86 => 'Snow showers',
+      95 => 'Thunderstorm',
+      96 || 99 => 'Thunderstorm with hail',
+      _ => 'Unknown',
+    };
   }
 
   /// Mock implementation of calculate function.
