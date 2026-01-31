@@ -32,6 +32,9 @@ enum ModelTask {
 
   /// PII (Personally Identifiable Information) extraction/redaction.
   piiExtraction,
+
+  /// Math and logical reasoning.
+  reasoning,
 }
 
 /// Available quantization options for models.
@@ -168,6 +171,7 @@ class LeapModel {
       ModelTask.translation => 'Translation',
       ModelTask.summarization => 'Summarization',
       ModelTask.piiExtraction => 'PII Extraction',
+      ModelTask.reasoning => 'Math & Logical Reasoning',
     };
   }
 }

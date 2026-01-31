@@ -20,8 +20,8 @@ const List<LeapModel> leapModelCatalog = [
     slug: 'LFM2-350M',
     name: 'LFM2-350M',
     description:
-        'Compact hybrid-architecture model optimized for edge deployment. '
-        'Ideal for resource-constrained devices requiring fast inference.',
+        'Our smallest model for edge devices and low latency deployments. '
+        'Fastest inference speed.',
     parameters: '350M',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
@@ -66,13 +66,26 @@ const List<LeapModel> leapModelCatalog = [
     languages: ['ja'],
   ),
 
-  // 1.2B Models
+  // 700M Models
+  LeapModel(
+    slug: 'LFM2-700M',
+    name: 'LFM2-700M',
+    description:
+        'Mid sized model for deploying on most devices. '
+        'Good balance of speed and capability.',
+    parameters: '700M',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2025-07-10',
+  ),
+
+  // 1.2B Models (Legacy)
   LeapModel(
     slug: 'LFM2-1.2B',
     name: 'LFM2-1.2B',
     description:
-        'Hybrid-architecture model that sets a new standard in quality and '
-        'speed for on-device AI. Balanced performance for general tasks.',
+        'Use the new LFM2.5-1.2B-Instruct checkpoint instead.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
@@ -117,6 +130,58 @@ const List<LeapModel> leapModelCatalog = [
     updatedAt: '2025-09-12',
   ),
 
+  // LFM2.5 1.2B Models (Latest)
+  LeapModel(
+    slug: 'LFM2.5-1.2B-Instruct',
+    name: 'LFM2.5-1.2B Instruct',
+    description:
+        'Instruction-tuned for chat. Best for most use cases. '
+        'Recommended model for general-purpose applications.',
+    parameters: '1.2B',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2026-01-15',
+  ),
+  LeapModel(
+    slug: 'LFM2.5-1.2B-Thinking',
+    name: 'LFM2.5-1.2B Thinking',
+    description:
+        'Optimized for math and logical problem-solving. '
+        'Enhanced reasoning capabilities for complex tasks.',
+    parameters: '1.2B',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    task: ModelTask.reasoning,
+    contextLength: 4096,
+    updatedAt: '2026-01-15',
+  ),
+  LeapModel(
+    slug: 'LFM2.5-1.2B-Base',
+    name: 'LFM2.5-1.2B Base',
+    description:
+        'Base model for finetuning or custom checkpoints. '
+        'Pre-trained without instruction tuning.',
+    parameters: '1.2B',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2026-01-15',
+  ),
+  LeapModel(
+    slug: 'LFM2.5-1.2B-JP',
+    name: 'LFM2.5-1.2B Japanese',
+    description:
+        'Fine-tuned model for high-quality Japanese text generation. '
+        'Optimized for Japanese language tasks.',
+    parameters: '1.2B',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    languages: ['ja'],
+    contextLength: 4096,
+    updatedAt: '2026-01-15',
+  ),
+
   // 2.6B Models
   LeapModel(
     slug: 'LFM2-2.6B',
@@ -151,6 +216,20 @@ const List<LeapModel> leapModelCatalog = [
     quantizations: _standardQuantizations,
     task: ModelTask.summarization,
     updatedAt: '2026-01-07',
+  ),
+
+  // 8B Models (Mixture of Experts)
+  LeapModel(
+    slug: 'LFM2-8B-A1B',
+    name: 'LFM2-8B-A1B',
+    description:
+        'Mixture-of-experts model for on-device speed and quality. '
+        '8B total parameters with 1.5B active per inference.',
+    parameters: '8B',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    contextLength: 4096,
+    updatedAt: '2026-01-15',
   ),
 
   // NOTE: Vision and Audio models are not yet available on LEAP Edge SDK.
