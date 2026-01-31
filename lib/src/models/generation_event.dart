@@ -13,76 +13,65 @@ sealed class GenerationEvent {
 
   /// Creates an event from a JSON map.
   factory GenerationEvent.fromMap(Map<String, dynamic> map) {
-    final type = map['type'] as String;
     final generationId = map['generationId'] as String;
 
-    switch (type) {
-      case 'chunk':
-        return GenerationChunkEvent(
-          generationId: generationId,
-          chunk: map['chunk'] as String,
-        );
-      case 'reasoningChunk':
-        return GenerationReasoningChunkEvent(
-          generationId: generationId,
-          chunk: map['chunk'] as String,
-        );
-      case 'audioSample':
-        return GenerationAudioEvent(
-          generationId: generationId,
-          audioSamples: Float32List.fromList(
-            (map['audioSamples'] as List)
-                .map((e) => (e as num).toDouble())
-                .toList(),
-          ),
-          sampleRate: map['sampleRate'] as int,
-        );
-      case 'functionCall':
-        return GenerationFunctionCallEvent(
-          generationId: generationId,
-          functionCalls: (map['functionCalls'] as List)
-              .map(
-                (c) => LeapFunctionCall.fromMap(
-                  Map<String, dynamic>.from(c as Map),
-                ),
-              )
+    return switch (map['type'] as String) {
+      'chunk' => GenerationChunkEvent(
+        generationId: generationId,
+        chunk: map['chunk'] as String,
+      ),
+      'reasoningChunk' => GenerationReasoningChunkEvent(
+        generationId: generationId,
+        chunk: map['chunk'] as String,
+      ),
+      'audioSample' => GenerationAudioEvent(
+        generationId: generationId,
+        audioSamples: Float32List.fromList(
+          (map['audioSamples'] as List)
+              .map((e) => (e as num).toDouble())
               .toList(),
-        );
-      case 'complete':
-        return GenerationCompleteEvent(
-          generationId: generationId,
-          message: ChatMessage.fromMap(
-            Map<String, dynamic>.from(map['message'] as Map),
-          ),
-          finishReason: _parseFinishReason(map['finishReason'] as String),
-          stats: map['stats'] != null
-              ? GenerationStats.fromMap(
-                  Map<String, dynamic>.from(map['stats'] as Map),
-                )
-              : null,
-        );
-      case 'error':
-        return GenerationErrorEvent(
-          generationId: generationId,
-          error: map['error'] as String,
-        );
-      case 'cancelled':
-        return GenerationCancelledEvent(generationId: generationId);
-      case 'toolResult':
-        return GenerationToolResultEvent(
-          generationId: generationId,
-          functionName: map['functionName'] as String,
-          arguments: Map<String, dynamic>.from(map['arguments'] as Map),
-          result: map['result'] as String,
-        );
-      default:
-        throw ArgumentError('Unknown generation event type: $type');
-    }
+        ),
+        sampleRate: map['sampleRate'] as int,
+      ),
+      'functionCall' => GenerationFunctionCallEvent(
+        generationId: generationId,
+        functionCalls: (map['functionCalls'] as List)
+            .map(
+              (c) =>
+                  LeapFunctionCall.fromMap(Map<String, dynamic>.from(c as Map)),
+            )
+            .toList(),
+      ),
+      'complete' => GenerationCompleteEvent(
+        generationId: generationId,
+        message: ChatMessage.fromMap(
+          Map<String, dynamic>.from(map['message'] as Map),
+        ),
+        finishReason: _parseFinishReason(map['finishReason'] as String),
+        stats: map['stats'] != null
+            ? GenerationStats.fromMap(
+                Map<String, dynamic>.from(map['stats'] as Map),
+              )
+            : null,
+      ),
+      'error' => GenerationErrorEvent(
+        generationId: generationId,
+        error: map['error'] as String,
+      ),
+      'cancelled' => GenerationCancelledEvent(generationId: generationId),
+      'toolResult' => GenerationToolResultEvent(
+        generationId: generationId,
+        functionName: map['functionName'] as String,
+        arguments: Map<String, dynamic>.from(map['arguments'] as Map),
+        result: map['result'] as String,
+      ),
+      final type => throw ArgumentError('Unknown generation event type: $type'),
+    };
   }
 }
 
 /// Event containing a text chunk from generation.
-class GenerationChunkEvent extends GenerationEvent {
+final class GenerationChunkEvent extends GenerationEvent {
   /// Creates a new [GenerationChunkEvent].
   const GenerationChunkEvent({required this.generationId, required this.chunk});
 
@@ -98,7 +87,7 @@ class GenerationChunkEvent extends GenerationEvent {
 }
 
 /// Event containing a reasoning/thinking text chunk.
-class GenerationReasoningChunkEvent extends GenerationEvent {
+final class GenerationReasoningChunkEvent extends GenerationEvent {
   /// Creates a new [GenerationReasoningChunkEvent].
   const GenerationReasoningChunkEvent({
     required this.generationId,
@@ -118,7 +107,7 @@ class GenerationReasoningChunkEvent extends GenerationEvent {
 }
 
 /// Event containing audio samples from generation.
-class GenerationAudioEvent extends GenerationEvent {
+final class GenerationAudioEvent extends GenerationEvent {
   /// Creates a new [GenerationAudioEvent].
   const GenerationAudioEvent({
     required this.generationId,
@@ -144,7 +133,7 @@ class GenerationAudioEvent extends GenerationEvent {
 }
 
 /// Event containing function calls from the model.
-class GenerationFunctionCallEvent extends GenerationEvent {
+final class GenerationFunctionCallEvent extends GenerationEvent {
   /// Creates a new [GenerationFunctionCallEvent].
   const GenerationFunctionCallEvent({
     required this.generationId,
@@ -165,7 +154,7 @@ class GenerationFunctionCallEvent extends GenerationEvent {
 }
 
 /// Event indicating generation completed successfully.
-class GenerationCompleteEvent extends GenerationEvent {
+final class GenerationCompleteEvent extends GenerationEvent {
   /// Creates a new [GenerationCompleteEvent].
   const GenerationCompleteEvent({
     required this.generationId,
@@ -195,7 +184,7 @@ class GenerationCompleteEvent extends GenerationEvent {
 }
 
 /// Event indicating an error during generation.
-class GenerationErrorEvent extends GenerationEvent {
+final class GenerationErrorEvent extends GenerationEvent {
   /// Creates a new [GenerationErrorEvent].
   const GenerationErrorEvent({required this.generationId, required this.error});
 
@@ -211,7 +200,7 @@ class GenerationErrorEvent extends GenerationEvent {
 }
 
 /// Event indicating generation was cancelled.
-class GenerationCancelledEvent extends GenerationEvent {
+final class GenerationCancelledEvent extends GenerationEvent {
   /// Creates a new [GenerationCancelledEvent].
   const GenerationCancelledEvent({required this.generationId});
 
@@ -226,7 +215,7 @@ class GenerationCancelledEvent extends GenerationEvent {
 ///
 /// This event is emitted by [Conversation.generateWithTools] after a tool
 /// handler executes successfully. It allows the UI to display tool results.
-class GenerationToolResultEvent extends GenerationEvent {
+final class GenerationToolResultEvent extends GenerationEvent {
   /// Creates a new [GenerationToolResultEvent].
   const GenerationToolResultEvent({
     required this.generationId,
@@ -255,19 +244,11 @@ class GenerationToolResultEvent extends GenerationEvent {
       'result: $result)';
 }
 
-GenerationFinishReason _parseFinishReason(String reason) {
-  switch (reason) {
-    case 'stop':
-      return GenerationFinishReason.stop;
-    case 'exceedContext':
-      return GenerationFinishReason.exceedContext;
-    case 'stopped':
-      return GenerationFinishReason.stopped;
-    case 'functionCall':
-      return GenerationFinishReason.functionCall;
-    case 'error':
-      return GenerationFinishReason.error;
-    default:
-      return GenerationFinishReason.stop;
-  }
-}
+GenerationFinishReason _parseFinishReason(String reason) => switch (reason) {
+  'stop' => GenerationFinishReason.stop,
+  'exceedContext' => GenerationFinishReason.exceedContext,
+  'stopped' => GenerationFinishReason.stopped,
+  'functionCall' => GenerationFinishReason.functionCall,
+  'error' => GenerationFinishReason.error,
+  _ => GenerationFinishReason.stop,
+};

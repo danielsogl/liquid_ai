@@ -59,6 +59,21 @@ final class GenerationStats {
     return map;
   }
 
+  /// Creates a copy with the given fields replaced.
+  GenerationStats copyWith({
+    int? tokenCount,
+    double? tokensPerSecond,
+    int? promptTokenCount,
+    int? generationTimeMs,
+  }) {
+    return GenerationStats(
+      tokenCount: tokenCount ?? this.tokenCount,
+      tokensPerSecond: tokensPerSecond ?? this.tokensPerSecond,
+      promptTokenCount: promptTokenCount ?? this.promptTokenCount,
+      generationTimeMs: generationTimeMs ?? this.generationTimeMs,
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

@@ -12,6 +12,8 @@ void main() {
 
     setUp(() {
       mockPlatform = MockLiquidAiPlatform();
+      // Set counter to 1 since we manually create conv_1
+      mockPlatform.conversationCounter = 1;
       conversation = Conversation(
         conversationId: 'conv_1',
         runnerId: 'runner_1',
@@ -120,6 +122,127 @@ void main() {
       );
 
       expect(mockPlatform.functionResults['conv_1'], hasLength(1));
+    });
+
+    group('clearHistory', () {
+      test('clears all history except system prompt by default', () async {
+        mockPlatform.conversationHistory['conv_1'] = [
+          {
+            'role': 'system',
+            'content': [
+              {'type': 'text', 'text': 'You are helpful'},
+            ],
+          },
+          {
+            'role': 'user',
+            'content': [
+              {'type': 'text', 'text': 'Hello'},
+            ],
+          },
+          {
+            'role': 'assistant',
+            'content': [
+              {'type': 'text', 'text': 'Hi!'},
+            ],
+          },
+        ];
+
+        await conversation.clearHistory();
+
+        final history = mockPlatform.conversationHistory['conv_1']!;
+        expect(history, hasLength(1));
+        expect(history[0]['role'], 'system');
+      });
+
+      test('clears everything when keepSystemPrompt is false', () async {
+        mockPlatform.conversationHistory['conv_1'] = [
+          {
+            'role': 'system',
+            'content': [
+              {'type': 'text', 'text': 'You are helpful'},
+            ],
+          },
+          {
+            'role': 'user',
+            'content': [
+              {'type': 'text', 'text': 'Hello'},
+            ],
+          },
+        ];
+
+        await conversation.clearHistory(keepSystemPrompt: false);
+
+        final history = mockPlatform.conversationHistory['conv_1']!;
+        expect(history, isEmpty);
+      });
+
+      test('throws when disposed', () async {
+        await conversation.dispose();
+
+        expect(() => conversation.clearHistory(), throwsA(isA<StateError>()));
+      });
+    });
+
+    group('fork', () {
+      test('creates independent copy of conversation', () async {
+        mockPlatform.conversationHistory['conv_1'] = [
+          {
+            'role': 'system',
+            'content': [
+              {'type': 'text', 'text': 'You are helpful'},
+            ],
+          },
+          {
+            'role': 'user',
+            'content': [
+              {'type': 'text', 'text': 'Hello'},
+            ],
+          },
+        ];
+
+        final forked = await conversation.fork();
+
+        expect(forked.conversationId, isNot(conversation.conversationId));
+        expect(forked.runnerId, conversation.runnerId);
+
+        // Verify the forked conversation has the same history
+        final originalHistory = mockPlatform.conversationHistory['conv_1']!;
+        final forkedHistory =
+            mockPlatform.conversationHistory[forked.conversationId]!;
+        expect(forkedHistory.length, originalHistory.length);
+      });
+
+      test('forked conversation is independent', () async {
+        mockPlatform.conversationHistory['conv_1'] = [
+          {
+            'role': 'user',
+            'content': [
+              {'type': 'text', 'text': 'Hello'},
+            ],
+          },
+        ];
+
+        final forked = await conversation.fork();
+
+        // Add to original
+        mockPlatform.conversationHistory['conv_1']!.add({
+          'role': 'assistant',
+          'content': [
+            {'type': 'text', 'text': 'Hi!'},
+          ],
+        });
+
+        // Forked should not be affected
+        final forkedHistory =
+            mockPlatform.conversationHistory[forked.conversationId]!;
+        expect(forkedHistory.length, 1);
+      });
+
+      test('throws when disposed', () async {
+        await conversation.dispose();
+
+        expect(() => conversation.fork(), throwsA(isA<StateError>()));
+      });
     });
 
     test('export returns JSON string', () async {

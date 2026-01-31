@@ -235,6 +235,34 @@ class ModelRunnerManager(
         return operationId
     }
 
+    // MARK: - Load Model From Path
+
+    // / Loads a model from a local file path.
+    // / Note: This feature is not supported on Android as the Leap SDK requires
+    // / models to be loaded via the downloader with model name and quantization.
+    fun loadModelFromPath(path: String): String {
+        val operationId = UUID.randomUUID().toString()
+
+        progressHandler.sendProgress(
+            operationId = operationId,
+            type = OperationType.LOAD,
+            status = OperationStatus.STARTED,
+        )
+
+        // Android SDK doesn't support loading from arbitrary file paths.
+        // Models must be loaded via downloadModel/loadModel with model name and quantization.
+        progressHandler.sendProgress(
+            operationId = operationId,
+            type = OperationType.LOAD,
+            status = OperationStatus.ERROR,
+            error =
+                "Loading from local file path is not supported on Android. " +
+                    "Use loadModel with model name and quantization instead.",
+        )
+
+        return operationId
+    }
+
     // MARK: - Unload Model
 
     // / Unloads a previously loaded model runner.

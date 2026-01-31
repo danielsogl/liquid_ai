@@ -56,6 +56,10 @@ class LiquidAiPlugin :
                 handleLoadModel(call, result)
             }
 
+            "loadModelFromPath" -> {
+                handleLoadModelFromPath(call, result)
+            }
+
             "unloadModel" -> {
                 handleUnloadModel(call, result)
             }
@@ -91,6 +95,14 @@ class LiquidAiPlugin :
 
             "disposeConversation" -> {
                 handleDisposeConversation(call, result)
+            }
+
+            "clearConversationHistory" -> {
+                handleClearConversationHistory(call, result)
+            }
+
+            "forkConversation" -> {
+                handleForkConversation(call, result)
             }
 
             "exportConversation" -> {
@@ -182,6 +194,30 @@ class LiquidAiPlugin :
             val operationId =
                 withContext(Dispatchers.IO) {
                     modelManager.loadModel(model, quantization)
+                }
+            result.success(operationId)
+        }
+    }
+
+    private fun handleLoadModelFromPath(
+        call: MethodCall,
+        result: Result,
+    ) {
+        val path = call.argument<String>("path")
+
+        if (path == null) {
+            result.error(
+                "INVALID_ARGUMENTS",
+                "Missing required argument: path",
+                null,
+            )
+            return
+        }
+
+        scope.launch {
+            val operationId =
+                withContext(Dispatchers.IO) {
+                    modelManager.loadModelFromPath(path)
                 }
             result.success(operationId)
         }
@@ -432,6 +468,66 @@ class LiquidAiPlugin :
 
         conversationManager.disposeConversation(conversationId)
         result.success(null)
+    }
+
+    private fun handleClearConversationHistory(
+        call: MethodCall,
+        result: Result,
+    ) {
+        val conversationId = call.argument<String>("conversationId")
+        val keepSystemPrompt = call.argument<Boolean>("keepSystemPrompt") ?: true
+
+        if (conversationId == null) {
+            result.error(
+                "INVALID_ARGUMENTS",
+                "Missing required argument: conversationId",
+                null,
+            )
+            return
+        }
+
+        try {
+            conversationManager.clearHistory(conversationId, keepSystemPrompt)
+            result.success(null)
+        } catch (e: Exception) {
+            result.error(
+                "CLEAR_FAILED",
+                e.message ?: "Clear history failed",
+                null,
+            )
+        }
+    }
+
+    private fun handleForkConversation(
+        call: MethodCall,
+        result: Result,
+    ) {
+        val conversationId = call.argument<String>("conversationId")
+
+        if (conversationId == null) {
+            result.error(
+                "INVALID_ARGUMENTS",
+                "Missing required argument: conversationId",
+                null,
+            )
+            return
+        }
+
+        scope.launch {
+            try {
+                val newConversationId =
+                    withContext(Dispatchers.IO) {
+                        conversationManager.forkConversation(conversationId)
+                    }
+                result.success(newConversationId)
+            } catch (e: Exception) {
+                result.error(
+                    "FORK_FAILED",
+                    e.message ?: "Fork conversation failed",
+                    null,
+                )
+            }
+        }
     }
 
     private fun handleExportConversation(

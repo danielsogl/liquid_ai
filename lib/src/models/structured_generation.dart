@@ -11,7 +11,7 @@ sealed class StructuredGenerationEvent<T> {
 ///
 /// Unlike streaming text, this just indicates that generation is ongoing
 /// without exposing partial (unparseable) JSON content.
-class StructuredProgressEvent<T> extends StructuredGenerationEvent<T> {
+final class StructuredProgressEvent<T> extends StructuredGenerationEvent<T> {
   /// Creates a new [StructuredProgressEvent].
   const StructuredProgressEvent({required this.tokenCount});
 
@@ -23,7 +23,7 @@ class StructuredProgressEvent<T> extends StructuredGenerationEvent<T> {
 }
 
 /// Event indicating structured generation completed successfully.
-class StructuredCompleteEvent<T> extends StructuredGenerationEvent<T> {
+final class StructuredCompleteEvent<T> extends StructuredGenerationEvent<T> {
   /// Creates a new [StructuredCompleteEvent].
   const StructuredCompleteEvent({
     required this.result,
@@ -46,7 +46,7 @@ class StructuredCompleteEvent<T> extends StructuredGenerationEvent<T> {
 }
 
 /// Event indicating an error during structured generation.
-class StructuredErrorEvent<T> extends StructuredGenerationEvent<T> {
+final class StructuredErrorEvent<T> extends StructuredGenerationEvent<T> {
   /// Creates a new [StructuredErrorEvent].
   const StructuredErrorEvent({required this.error, this.rawResponse});
 
@@ -61,7 +61,7 @@ class StructuredErrorEvent<T> extends StructuredGenerationEvent<T> {
 }
 
 /// Event indicating structured generation was cancelled.
-class StructuredCancelledEvent<T> extends StructuredGenerationEvent<T> {
+final class StructuredCancelledEvent<T> extends StructuredGenerationEvent<T> {
   /// Creates a new [StructuredCancelledEvent].
   const StructuredCancelledEvent({this.partialResponse});
 

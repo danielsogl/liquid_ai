@@ -286,6 +286,9 @@ class Conversation {
   }
 
   /// Registers a function that can be called by the model.
+  ///
+  /// Note: Once registered, a function cannot be unregistered. It remains
+  /// active for the lifetime of the conversation.
   Future<void> registerFunction(LeapFunction function) async {
     _checkDisposed();
     await _platform.registerFunction(conversationId, function.toMap());
@@ -315,6 +318,57 @@ class Conversation {
   Future<int> getTokenCount() async {
     _checkDisposed();
     return _platform.getTokenCount(conversationId);
+  }
+
+  /// Clears the conversation history while keeping the conversation active.
+  ///
+  /// This is useful for starting fresh without creating a new conversation.
+  /// If [keepSystemPrompt] is true (the default), the initial system prompt
+  /// is preserved.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Clear history but keep the system prompt
+  /// await conversation.clearHistory();
+  ///
+  /// // Clear everything including system prompt
+  /// await conversation.clearHistory(keepSystemPrompt: false);
+  /// ```
+  Future<void> clearHistory({bool keepSystemPrompt = true}) async {
+    _checkDisposed();
+    await _platform.clearConversationHistory(
+      conversationId,
+      keepSystemPrompt: keepSystemPrompt,
+    );
+  }
+
+  /// Creates a fork (copy) of this conversation at its current state.
+  ///
+  /// The forked conversation has the same history but is completely
+  /// independent - changes to one don't affect the other. This is useful
+  /// for exploring different conversation branches or creating checkpoints.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Create a checkpoint before trying something
+  /// final checkpoint = await conversation.fork();
+  ///
+  /// // Try something in the original conversation
+  /// await conversation.generateText('Tell me about quantum physics');
+  ///
+  /// // Use the checkpoint to explore a different path
+  /// await checkpoint.generateText('Tell me about biology');
+  ///
+  /// // Both conversations now have different histories
+  /// ```
+  Future<Conversation> fork() async {
+    _checkDisposed();
+    final newConversationId = await _platform.forkConversation(conversationId);
+    return Conversation(
+      conversationId: newConversationId,
+      runnerId: runnerId,
+      platform: _platform,
+    );
   }
 
   /// Exports the conversation as a JSON string.

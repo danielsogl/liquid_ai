@@ -119,6 +119,25 @@ final class LiquidAiPluginTests: XCTestCase {
         waitForExpectations(timeout: 5)
     }
 
+    // MARK: - Load Model From Path Argument Validation Tests
+
+    func testLoadModelFromPathMissingPathReturnsError() {
+        let plugin = LiquidAiPlugin()
+        let expectation = self.expectation(description: "Error returned")
+
+        let call = FlutterMethodCall(methodName: "loadModelFromPath", arguments: nil)
+        plugin.handle(call) { result in
+            if let error = result as? FlutterError {
+                XCTAssertEqual(error.code, "INVALID_ARGUMENTS")
+            } else {
+                XCTFail("Expected FlutterError")
+            }
+            expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 5)
+    }
+
     // MARK: - Unload Model Argument Validation Tests
 
     func testUnloadModelMissingRunnerIdReturnsError() {
@@ -215,6 +234,40 @@ final class LiquidAiPluginTests: XCTestCase {
         let expectation = self.expectation(description: "Error returned")
 
         let call = FlutterMethodCall(methodName: "disposeConversation", arguments: nil)
+        plugin.handle(call) { result in
+            if let error = result as? FlutterError {
+                XCTAssertEqual(error.code, "INVALID_ARGUMENTS")
+            } else {
+                XCTFail("Expected FlutterError")
+            }
+            expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 5)
+    }
+
+    func testClearConversationHistoryMissingConversationIdReturnsError() {
+        let plugin = LiquidAiPlugin()
+        let expectation = self.expectation(description: "Error returned")
+
+        let call = FlutterMethodCall(methodName: "clearConversationHistory", arguments: nil)
+        plugin.handle(call) { result in
+            if let error = result as? FlutterError {
+                XCTAssertEqual(error.code, "INVALID_ARGUMENTS")
+            } else {
+                XCTFail("Expected FlutterError")
+            }
+            expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 5)
+    }
+
+    func testForkConversationMissingConversationIdReturnsError() {
+        let plugin = LiquidAiPlugin()
+        let expectation = self.expectation(description: "Error returned")
+
+        let call = FlutterMethodCall(methodName: "forkConversation", arguments: nil)
         plugin.handle(call) { result in
             if let error = result as? FlutterError {
                 XCTAssertEqual(error.code, "INVALID_ARGUMENTS")

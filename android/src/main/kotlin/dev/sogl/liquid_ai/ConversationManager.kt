@@ -111,6 +111,65 @@ class ConversationManager(
         conversations.remove(conversationId)
     }
 
+    // / Clears the conversation history.
+    fun clearHistory(
+        conversationId: String,
+        keepSystemPrompt: Boolean,
+    ) {
+        val state =
+            conversations[conversationId]
+                ?: throw ConversationException("Conversation not found: $conversationId")
+
+        if (keepSystemPrompt) {
+            // Keep only system messages
+            val systemMessages =
+                state.history.filter { it.role == ChatMessage.Role.SYSTEM }
+            state.history.clear()
+            state.history.addAll(systemMessages)
+        } else {
+            state.history.clear()
+        }
+    }
+
+    // / Creates a fork (copy) of a conversation.
+    fun forkConversation(conversationId: String): String {
+        val originalState =
+            conversations[conversationId]
+                ?: throw ConversationException("Conversation not found: $conversationId")
+
+        val runner =
+            runnerManager.getRunner(originalState.runnerId)
+                ?: throw ConversationException("Model runner not found: ${originalState.runnerId}")
+
+        val newConversationId = UUID.randomUUID().toString()
+
+        // Create a new conversation with the same runner
+        val newConversation = runner.createConversation()
+
+        // Deep copy the history
+        val newHistory =
+            originalState.history
+                .map { msg ->
+                    ChatMessage(
+                        role = msg.role,
+                        textContent =
+                            msg.content
+                                .filterIsInstance<ChatMessageContent.Text>()
+                                .joinToString("") { it.text },
+                    )
+                }.toMutableList()
+
+        val newState =
+            ConversationState(
+                runnerId = originalState.runnerId,
+                conversation = newConversation,
+                history = newHistory,
+            )
+
+        conversations[newConversationId] = newState
+        return newConversationId
+    }
+
     // / Exports a conversation as JSON using Gson with Leap SDK adapters.
     fun exportConversation(conversationId: String): String {
         val state =

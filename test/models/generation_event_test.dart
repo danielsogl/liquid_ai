@@ -76,6 +76,58 @@ void main() {
       expect(str, contains('GenerationStats'));
       expect(str, contains('tokenCount: 100'));
     });
+
+    group('copyWith', () {
+      test('copies with new tokenCount', () {
+        const original = GenerationStats(
+          tokenCount: 100,
+          tokensPerSecond: 50.0,
+        );
+        final copied = original.copyWith(tokenCount: 200);
+
+        expect(copied.tokenCount, 200);
+        expect(copied.tokensPerSecond, 50.0);
+      });
+
+      test('copies with new tokensPerSecond', () {
+        const original = GenerationStats(
+          tokenCount: 100,
+          tokensPerSecond: 50.0,
+        );
+        final copied = original.copyWith(tokensPerSecond: 75.0);
+
+        expect(copied.tokenCount, 100);
+        expect(copied.tokensPerSecond, 75.0);
+      });
+
+      test('copies with optional fields', () {
+        const original = GenerationStats(
+          tokenCount: 100,
+          tokensPerSecond: 50.0,
+        );
+        final copied = original.copyWith(
+          promptTokenCount: 25,
+          generationTimeMs: 2000,
+        );
+
+        expect(copied.tokenCount, 100);
+        expect(copied.promptTokenCount, 25);
+        expect(copied.generationTimeMs, 2000);
+      });
+
+      test('preserves original when no changes', () {
+        const original = GenerationStats(
+          tokenCount: 100,
+          tokensPerSecond: 50.0,
+          promptTokenCount: 25,
+        );
+        final copied = original.copyWith();
+
+        expect(copied.tokenCount, original.tokenCount);
+        expect(copied.tokensPerSecond, original.tokensPerSecond);
+        expect(copied.promptTokenCount, original.promptTokenCount);
+      });
+    });
   });
 
   group('GenerationChunkEvent', () {

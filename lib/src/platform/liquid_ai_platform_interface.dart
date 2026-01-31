@@ -87,6 +87,20 @@ abstract class LiquidAiPlatform extends PlatformInterface {
   /// Disposes of a conversation.
   Future<void> disposeConversation(String conversationId);
 
+  /// Clears the conversation history while keeping the conversation active.
+  ///
+  /// If [keepSystemPrompt] is true, the system prompt (if any) is preserved.
+  Future<void> clearConversationHistory(
+    String conversationId, {
+    bool keepSystemPrompt = true,
+  });
+
+  /// Creates a fork (copy) of a conversation at its current state.
+  ///
+  /// Returns the new conversation ID. The forked conversation has the same
+  /// history but is independent - changes to one don't affect the other.
+  Future<String> forkConversation(String conversationId);
+
   /// Exports a conversation as JSON.
   Future<String> exportConversation(String conversationId);
 

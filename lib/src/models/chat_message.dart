@@ -24,17 +24,12 @@ sealed class ChatMessageContent {
 
   /// Creates content from a JSON map.
   factory ChatMessageContent.fromMap(Map<String, dynamic> map) {
-    final type = map['type'] as String;
-    switch (type) {
-      case 'text':
-        return TextContent.fromMap(map);
-      case 'image':
-        return ImageContent.fromMap(map);
-      case 'audio':
-        return AudioContent.fromMap(map);
-      default:
-        throw ArgumentError('Unknown content type: $type');
-    }
+    return switch (map['type'] as String) {
+      'text' => TextContent.fromMap(map),
+      'image' => ImageContent.fromMap(map),
+      'audio' => AudioContent.fromMap(map),
+      final type => throw ArgumentError('Unknown content type: $type'),
+    };
   }
 
   /// Converts this content to a JSON map.
@@ -237,6 +232,25 @@ final class ChatMessage {
     'role': role.name,
     'content': content.map((c) => c.toMap()).toList(),
   };
+
+  /// Creates a copy with the given fields replaced.
+  ///
+  /// Example:
+  /// ```dart
+  /// final message = ChatMessage.user('Hello');
+  /// final updated = message.copyWith(
+  ///   content: [...message.content, TextContent(text: ' World')],
+  /// );
+  /// ```
+  ChatMessage copyWith({
+    ChatMessageRole? role,
+    List<ChatMessageContent>? content,
+  }) {
+    return ChatMessage(
+      role: role ?? this.role,
+      content: content ?? this.content,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>

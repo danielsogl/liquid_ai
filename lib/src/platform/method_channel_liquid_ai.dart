@@ -155,6 +155,26 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
   }
 
   @override
+  Future<void> clearConversationHistory(
+    String conversationId, {
+    bool keepSystemPrompt = true,
+  }) async {
+    await methodChannel.invokeMethod<void>('clearConversationHistory', {
+      'conversationId': conversationId,
+      'keepSystemPrompt': keepSystemPrompt,
+    });
+  }
+
+  @override
+  Future<String> forkConversation(String conversationId) async {
+    final newConversationId = await methodChannel.invokeMethod<String>(
+      'forkConversation',
+      {'conversationId': conversationId},
+    );
+    return newConversationId!;
+  }
+
+  @override
   Future<String> exportConversation(String conversationId) async {
     final json = await methodChannel.invokeMethod<String>(
       'exportConversation',

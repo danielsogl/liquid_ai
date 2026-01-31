@@ -5,13 +5,41 @@ import UIKit
 
 /// Flutter plugin for Liquid AI with LEAP SDK integration.
 public class LiquidAiPlugin: NSObject, FlutterPlugin {
-    private let progressHandler = DownloadProgressHandler()
-    private let generationProgressHandler = GenerationProgressHandler()
-    private lazy var modelManager = ModelRunnerManager(progressHandler: progressHandler)
-    private lazy var conversationManager = ConversationManager(
+    let progressHandler = DownloadProgressHandler()
+    let generationProgressHandler = GenerationProgressHandler()
+    lazy var modelManager = ModelRunnerManager(progressHandler: progressHandler)
+    lazy var conversationManager = ConversationManager(
         progressHandler: generationProgressHandler,
         runnerManager: modelManager
     )
+
+    /// Method handler type alias.
+    typealias MethodHandler = (FlutterMethodCall, @escaping FlutterResult) -> Void
+
+    /// Lazy initialization of method handlers dictionary.
+    private lazy var methodHandlers: [String: MethodHandler] = [
+        "getPlatformVersion": { _, result in result("iOS " + UIDevice.current.systemVersion) },
+        "downloadModel": handleDownloadModel,
+        "loadModel": handleLoadModel,
+        "loadModelFromPath": handleLoadModelFromPath,
+        "unloadModel": handleUnloadModel,
+        "isModelDownloaded": handleIsModelDownloaded,
+        "deleteModel": handleDeleteModel,
+        "cancelOperation": handleCancelOperation,
+        "getModelStatus": handleGetModelStatus,
+        "createConversation": handleCreateConversation,
+        "createConversationFromHistory": handleCreateConversationFromHistory,
+        "getConversationHistory": handleGetConversationHistory,
+        "disposeConversation": handleDisposeConversation,
+        "clearConversationHistory": handleClearConversationHistory,
+        "forkConversation": handleForkConversation,
+        "exportConversation": handleExportConversation,
+        "generateResponse": handleGenerateResponse,
+        "stopGeneration": handleStopGeneration,
+        "registerFunction": handleRegisterFunction,
+        "provideFunctionResult": handleProvideFunctionResult,
+        "getTokenCount": handleGetTokenCount,
+    ]
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
@@ -34,73 +62,18 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "getPlatformVersion":
-            result("iOS " + UIDevice.current.systemVersion)
-
-        case "downloadModel":
-            handleDownloadModel(call, result: result)
-
-        case "loadModel":
-            handleLoadModel(call, result: result)
-
-        case "unloadModel":
-            handleUnloadModel(call, result: result)
-
-        case "isModelDownloaded":
-            handleIsModelDownloaded(call, result: result)
-
-        case "deleteModel":
-            handleDeleteModel(call, result: result)
-
-        case "cancelOperation":
-            handleCancelOperation(call, result: result)
-
-        case "getModelStatus":
-            handleGetModelStatus(call, result: result)
-
-        // Conversation Management
-        case "createConversation":
-            handleCreateConversation(call, result: result)
-
-        case "createConversationFromHistory":
-            handleCreateConversationFromHistory(call, result: result)
-
-        case "getConversationHistory":
-            handleGetConversationHistory(call, result: result)
-
-        case "disposeConversation":
-            handleDisposeConversation(call, result: result)
-
-        case "exportConversation":
-            handleExportConversation(call, result: result)
-
-        // Generation
-        case "generateResponse":
-            handleGenerateResponse(call, result: result)
-
-        case "stopGeneration":
-            handleStopGeneration(call, result: result)
-
-        // Function Calling
-        case "registerFunction":
-            handleRegisterFunction(call, result: result)
-
-        case "provideFunctionResult":
-            handleProvideFunctionResult(call, result: result)
-
-        // Token Counting
-        case "getTokenCount":
-            handleGetTokenCount(call, result: result)
-
-        default:
+        if let handler = methodHandlers[call.method] {
+            handler(call, result)
+        } else {
             result(FlutterMethodNotImplemented)
         }
     }
+}
 
-    // MARK: - Method Handlers
+// MARK: - Model Handlers
 
-    private func handleDownloadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+extension LiquidAiPlugin {
+    func handleDownloadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
               let quantization = args["quantization"] as? String else
@@ -124,7 +97,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleLoadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleLoadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
               let quantization = args["quantization"] as? String else
@@ -148,7 +121,27 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleUnloadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleLoadModelFromPath(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let path = args["path"] as? String else
+        {
+            result(FlutterError(
+                code: "INVALID_ARGUMENTS",
+                message: "Missing required argument: path",
+                details: nil
+            ))
+            return
+        }
+
+        Task {
+            let operationId = await modelManager.loadModelFromPath(path: path)
+            DispatchQueue.main.async {
+                result(operationId)
+            }
+        }
+    }
+
+    func handleUnloadModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let runnerId = args["runnerId"] as? String else
         {
@@ -168,7 +161,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleIsModelDownloaded(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleIsModelDownloaded(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
               let quantization = args["quantization"] as? String else
@@ -192,7 +185,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleDeleteModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleDeleteModel(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
               let quantization = args["quantization"] as? String else
@@ -223,7 +216,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleCancelOperation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleCancelOperation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let operationId = args["operationId"] as? String else
         {
@@ -243,7 +236,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleGetModelStatus(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleGetModelStatus(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let model = args["model"] as? String,
               let quantization = args["quantization"] as? String else
@@ -270,10 +263,12 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
             }
         }
     }
+}
 
-    // MARK: - Conversation Handlers
+// MARK: - Conversation Handlers
 
-    private func handleCreateConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+extension LiquidAiPlugin {
+    func handleCreateConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let runnerId = args["runnerId"] as? String else
         {
@@ -308,7 +303,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleCreateConversationFromHistory(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleCreateConversationFromHistory(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let runnerId = args["runnerId"] as? String,
               let history = args["history"] as? [[String: Any]] else
@@ -342,7 +337,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleGetConversationHistory(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleGetConversationHistory(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String else
         {
@@ -372,7 +367,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleDisposeConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleDisposeConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String else
         {
@@ -392,7 +387,72 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleExportConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleClearConversationHistory(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let conversationId = args["conversationId"] as? String else
+        {
+            result(FlutterError(
+                code: "INVALID_ARGUMENTS",
+                message: "Missing required argument: conversationId",
+                details: nil
+            ))
+            return
+        }
+
+        let keepSystemPrompt = args["keepSystemPrompt"] as? Bool ?? true
+
+        Task {
+            do {
+                try await conversationManager.clearHistory(
+                    conversationId: conversationId,
+                    keepSystemPrompt: keepSystemPrompt
+                )
+                DispatchQueue.main.async {
+                    result(nil)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    result(FlutterError(
+                        code: "CLEAR_FAILED",
+                        message: error.localizedDescription,
+                        details: nil
+                    ))
+                }
+            }
+        }
+    }
+
+    func handleForkConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let conversationId = args["conversationId"] as? String else
+        {
+            result(FlutterError(
+                code: "INVALID_ARGUMENTS",
+                message: "Missing required argument: conversationId",
+                details: nil
+            ))
+            return
+        }
+
+        Task {
+            do {
+                let newConversationId = try await conversationManager.forkConversation(conversationId)
+                DispatchQueue.main.async {
+                    result(newConversationId)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    result(FlutterError(
+                        code: "FORK_FAILED",
+                        message: error.localizedDescription,
+                        details: nil
+                    ))
+                }
+            }
+        }
+    }
+
+    func handleExportConversation(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String else
         {
@@ -421,10 +481,12 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
             }
         }
     }
+}
 
-    // MARK: - Generation Handlers
+// MARK: - Generation Handlers
 
-    private func handleGenerateResponse(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+extension LiquidAiPlugin {
+    func handleGenerateResponse(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String,
               let message = args["message"] as? [String: Any] else
@@ -461,7 +523,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleStopGeneration(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleStopGeneration(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let generationId = args["generationId"] as? String else
         {
@@ -480,10 +542,12 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
             }
         }
     }
+}
 
-    // MARK: - Function Calling Handlers
+// MARK: - Function Calling Handlers
 
-    private func handleRegisterFunction(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+extension LiquidAiPlugin {
+    func handleRegisterFunction(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String,
               let function = args["function"] as? [String: Any] else
@@ -517,7 +581,7 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func handleProvideFunctionResult(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    func handleProvideFunctionResult(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String,
               let functionResult = args["result"] as? [String: Any] else
@@ -550,10 +614,12 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
             }
         }
     }
+}
 
-    // MARK: - Token Counting
+// MARK: - Token Counting Handlers
 
-    private func handleGetTokenCount(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+extension LiquidAiPlugin {
+    func handleGetTokenCount(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any],
               let conversationId = args["conversationId"] as? String else
         {

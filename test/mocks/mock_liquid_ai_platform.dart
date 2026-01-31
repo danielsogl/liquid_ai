@@ -32,6 +32,9 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   /// Counter for generating unique conversation IDs.
   int _conversationCounter = 0;
 
+  /// Sets the conversation counter for testing.
+  set conversationCounter(int value) => _conversationCounter = value;
+
   /// Counter for generating unique generation IDs.
   int _generationCounter = 0;
 
@@ -373,6 +376,49 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
     conversationHistory.remove(conversationId);
     registeredFunctions.remove(conversationId);
     functionResults.remove(conversationId);
+  }
+
+  @override
+  Future<void> clearConversationHistory(
+    String conversationId, {
+    bool keepSystemPrompt = true,
+  }) async {
+    final history = conversationHistory[conversationId];
+    if (history == null) return;
+
+    if (keepSystemPrompt) {
+      // Keep only system messages
+      final systemMessages = history
+          .where((m) => m['role'] == 'system')
+          .toList();
+      conversationHistory[conversationId] = systemMessages;
+    } else {
+      conversationHistory[conversationId] = [];
+    }
+  }
+
+  @override
+  Future<String> forkConversation(String conversationId) async {
+    final history = conversationHistory[conversationId];
+    if (history == null) {
+      throw Exception('Conversation not found: $conversationId');
+    }
+
+    final newConversationId = 'conv_${++_conversationCounter}';
+    // Deep copy the history
+    conversationHistory[newConversationId] = history
+        .map((m) => Map<String, dynamic>.from(m))
+        .toList();
+
+    // Copy registered functions
+    final functions = registeredFunctions[conversationId];
+    if (functions != null) {
+      registeredFunctions[newConversationId] = functions
+          .map((f) => Map<String, dynamic>.from(f))
+          .toList();
+    }
+
+    return newConversationId;
   }
 
   @override

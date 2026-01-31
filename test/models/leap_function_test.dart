@@ -321,6 +321,60 @@ void main() {
       expect(str, contains('call_xyz'));
       expect(str, contains('my_func'));
     });
+
+    group('copyWith', () {
+      test('copies with new id', () {
+        const original = LeapFunctionCall(
+          id: 'call_1',
+          name: 'func',
+          arguments: {'key': 'value'},
+        );
+        final copied = original.copyWith(id: 'call_2');
+
+        expect(copied.id, 'call_2');
+        expect(copied.name, 'func');
+        expect(copied.arguments, {'key': 'value'});
+      });
+
+      test('copies with new name', () {
+        const original = LeapFunctionCall(
+          id: 'call_1',
+          name: 'func',
+          arguments: {'key': 'value'},
+        );
+        final copied = original.copyWith(name: 'new_func');
+
+        expect(copied.id, 'call_1');
+        expect(copied.name, 'new_func');
+        expect(copied.arguments, {'key': 'value'});
+      });
+
+      test('copies with new arguments', () {
+        const original = LeapFunctionCall(
+          id: 'call_1',
+          name: 'func',
+          arguments: {'key': 'value'},
+        );
+        final copied = original.copyWith(arguments: {'newKey': 'newValue'});
+
+        expect(copied.id, 'call_1');
+        expect(copied.name, 'func');
+        expect(copied.arguments, {'newKey': 'newValue'});
+      });
+
+      test('preserves original when no changes', () {
+        const original = LeapFunctionCall(
+          id: 'call_1',
+          name: 'func',
+          arguments: {'key': 'value'},
+        );
+        final copied = original.copyWith();
+
+        expect(copied.id, original.id);
+        expect(copied.name, original.name);
+        expect(copied.arguments, original.arguments);
+      });
+    });
   });
 
   group('LeapFunctionResult', () {

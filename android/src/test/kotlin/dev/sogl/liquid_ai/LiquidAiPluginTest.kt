@@ -96,6 +96,26 @@ class LiquidAiPluginTest {
         assertEquals("INVALID_ARGUMENTS", result.errorCode)
     }
 
+    // MARK: - loadModelFromPath Tests
+
+    @Test
+    fun `loadModelFromPath returns error for missing path`() {
+        val call = MethodCall("loadModelFromPath", null)
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
+    @Test
+    fun `loadModelFromPath returns error for missing path argument`() {
+        val call = MethodCall("loadModelFromPath", mapOf("other" to "value"))
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
     // MARK: - unloadModel Tests
 
     @Test
@@ -210,6 +230,24 @@ class LiquidAiPluginTest {
     @Test
     fun `exportConversation returns error for missing conversationId`() {
         val call = MethodCall("exportConversation", null)
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
+    @Test
+    fun `clearConversationHistory returns error for missing conversationId`() {
+        val call = MethodCall("clearConversationHistory", null)
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
+    @Test
+    fun `forkConversation returns error for missing conversationId`() {
+        val call = MethodCall("forkConversation", null)
 
         plugin.onMethodCall(call, result)
 

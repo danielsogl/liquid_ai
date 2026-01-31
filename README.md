@@ -129,6 +129,40 @@ await for (final event in liquidAi.loadModel(model.slug, quantization.slug)) {
 }
 ```
 
+### Load Options
+
+Configure the inference engine when loading models:
+
+```dart
+await for (final event in liquidAi.loadModel(
+  model.slug,
+  quantization.slug,
+  options: LoadOptions(
+    contextSize: 4096,   // Maximum context window
+    batchSize: 512,      // Batch size for prompt processing
+    threads: 4,          // Number of CPU threads
+    gpuLayers: 32,       // Layers to offload to GPU (if available)
+  ),
+)) {
+  // Handle events...
+}
+```
+
+### Load from Local File
+
+Load a model directly from a file path (useful for custom or bundled models):
+
+```dart
+await for (final event in liquidAi.loadModelFromPath(
+  '/path/to/model.gguf',
+  options: LoadOptions(contextSize: 2048),
+)) {
+  if (event is LoadCompleteEvent) {
+    runner = event.runner;
+  }
+}
+```
+
 ### Model Status
 
 ```dart
@@ -424,6 +458,37 @@ final json = await conversation.export();
 
 // Create from existing history
 final restored = await runner.createConversationFromHistory(history);
+```
+
+### Clear History
+
+Reset the conversation while keeping it active:
+
+```dart
+// Clear history but keep the system prompt
+await conversation.clearHistory();
+
+// Clear everything including system prompt
+await conversation.clearHistory(keepSystemPrompt: false);
+```
+
+### Fork Conversations
+
+Create independent copies for exploring different conversation branches:
+
+```dart
+// Create a checkpoint before trying something
+final checkpoint = await conversation.fork();
+
+// Try something in the original conversation
+await conversation.generateText('Tell me about quantum physics');
+
+// Use the checkpoint to explore a different path
+await checkpoint.generateText('Tell me about biology');
+
+// Both conversations now have different histories
+// Don't forget to dispose the forked conversation when done
+await checkpoint.dispose();
 ```
 
 ### Token Counting

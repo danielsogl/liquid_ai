@@ -111,6 +111,19 @@ final class LeapFunctionCall {
     'arguments': arguments,
   };
 
+  /// Creates a copy with the given fields replaced.
+  LeapFunctionCall copyWith({
+    String? id,
+    String? name,
+    Map<String, dynamic>? arguments,
+  }) {
+    return LeapFunctionCall(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      arguments: arguments ?? this.arguments,
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

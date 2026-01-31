@@ -261,5 +261,33 @@ void main() {
         contains('ChatMessage(role: ChatMessageRole.user'),
       );
     });
+
+    group('copyWith', () {
+      test('copies with new role', () {
+        final original = ChatMessage.user('Hello');
+        final copied = original.copyWith(role: ChatMessageRole.assistant);
+
+        expect(copied.role, ChatMessageRole.assistant);
+        expect(copied.text, 'Hello');
+      });
+
+      test('copies with new content', () {
+        final original = ChatMessage.user('Hello');
+        final copied = original.copyWith(
+          content: [const TextContent(text: 'World')],
+        );
+
+        expect(copied.role, ChatMessageRole.user);
+        expect(copied.text, 'World');
+      });
+
+      test('preserves original when no changes', () {
+        final original = ChatMessage.user('Hello');
+        final copied = original.copyWith();
+
+        expect(copied.role, original.role);
+        expect(copied.text, original.text);
+      });
+    });
   });
 }

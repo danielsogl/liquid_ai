@@ -228,6 +228,86 @@ actor ModelRunnerManager {
         return operationId
     }
 
+    // MARK: - Load Model From Path
+
+    /// Loads a model from a local file path.
+    func loadModelFromPath(path: String) async -> String {
+        let operationId = UUID().uuidString
+        cancelledOperations.remove(operationId)
+
+        print("[LiquidAI] loadModelFromPath: Starting load from \(path)")
+
+        progressHandler.sendProgress(
+            operationId: operationId,
+            type: .load,
+            status: .started
+        )
+
+        let task = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            do {
+                let fileURL = URL(fileURLWithPath: path)
+
+                guard FileManager.default.fileExists(atPath: path) else {
+                    progressHandler.sendProgress(
+                        operationId: operationId,
+                        type: .load,
+                        status: .error,
+                        error: "Model file not found at path: \(path)"
+                    )
+                    await removeTask(operationId)
+                    return
+                }
+
+                progressHandler.sendProgress(
+                    operationId: operationId,
+                    type: .load,
+                    status: .progress,
+                    progress: 0.5
+                )
+
+                let runner = try await Leap.load(url: fileURL)
+
+                let isCancelled = await isOperationCancelled(operationId)
+                if isCancelled {
+                    await runner.unload()
+                    return
+                }
+
+                let runnerId = UUID().uuidString
+                await storeRunner(runnerId, runner: runner)
+
+                progressHandler.sendProgress(
+                    operationId: operationId,
+                    type: .load,
+                    status: .completed,
+                    progress: 1.0,
+                    runnerId: runnerId
+                )
+
+                await removeTask(operationId)
+
+            } catch {
+                let isCancelled = await isOperationCancelled(operationId)
+                if !isCancelled {
+                    progressHandler.sendProgress(
+                        operationId: operationId,
+                        type: .load,
+                        status: .error,
+                        error: error.localizedDescription
+                    )
+                }
+                await removeTask(operationId)
+            }
+        }
+
+        activeTasks[operationId] = task
+        return operationId
+    }
+
     // MARK: - Unload Model
 
     /// Unloads a previously loaded model runner.

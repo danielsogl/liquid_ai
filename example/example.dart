@@ -36,7 +36,18 @@ void main() async {
   print('Loading ${model.name} (${quantization.slug})...');
   ModelRunner? modelRunner;
 
-  await for (final event in liquidAi.loadModel(model.slug, quantization.slug)) {
+  // Optional: Configure load options for the inference engine
+  const loadOptions = LoadOptions(
+    contextSize: 4096, // Maximum context window
+    batchSize: 512, // Batch size for prompt processing
+    threads: 4, // Number of CPU threads
+  );
+
+  await for (final event in liquidAi.loadModel(
+    model.slug,
+    quantization.slug,
+    options: loadOptions,
+  )) {
     switch (event) {
       case LoadStartedEvent():
         print('Download started');
@@ -271,7 +282,49 @@ void main() async {
   }
 
   // ============================================================
-  // 8. Model Management
+  // 8. Conversation Management
+  // ============================================================
+
+  // Fork a conversation to explore different branches
+  print('\nForking conversation...');
+  final forkedConversation = await conversation.fork();
+  print('Forked conversation ID: ${forkedConversation.conversationId}');
+
+  // Each conversation is independent
+  await forkedConversation.generateText('What is 2 + 2?');
+  await conversation.generateText('What is 3 + 3?');
+
+  // Clear history while keeping the system prompt
+  await forkedConversation.clearHistory();
+  print('Forked conversation history cleared');
+
+  // Clear everything including system prompt
+  await forkedConversation.clearHistory(keepSystemPrompt: false);
+  print('Forked conversation fully cleared');
+
+  // Don't forget to dispose forked conversations
+  await forkedConversation.dispose();
+
+  // ============================================================
+  // 9. Load Model from Local Path
+  // ============================================================
+
+  // You can also load a model directly from a file path
+  // Useful for custom models or bundled assets
+  print('\nLoading from local path (example)...');
+  // final customModelPath = '/path/to/custom-model.gguf';
+  // await for (final event in liquidAi.loadModelFromPath(
+  //   customModelPath,
+  //   options: LoadOptions(contextSize: 2048),
+  // )) {
+  //   if (event is LoadCompleteEvent) {
+  //     print('Custom model loaded!');
+  //     await event.runner.dispose();
+  //   }
+  // }
+
+  // ============================================================
+  // 10. Model Management
   // ============================================================
 
   // Check if a model is downloaded (using the model and quantization from above)

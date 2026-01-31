@@ -97,6 +97,54 @@ actor ConversationManager {
         conversations.removeValue(forKey: conversationId)
     }
 
+    /// Clears the conversation history.
+    func clearHistory(
+        conversationId: String,
+        keepSystemPrompt: Bool
+    ) throws {
+        guard var state = conversations[conversationId] else {
+            throw ConversationError.conversationNotFound(conversationId)
+        }
+
+        if keepSystemPrompt {
+            // Keep only system messages
+            let systemMessages = state.history.filter { $0.role == .system }
+            state.history = systemMessages
+        } else {
+            state.history = []
+        }
+
+        conversations[conversationId] = state
+    }
+
+    /// Creates a fork (copy) of a conversation.
+    func forkConversation(_ conversationId: String) async throws -> String {
+        guard let originalState = conversations[conversationId] else {
+            throw ConversationError.conversationNotFound(conversationId)
+        }
+
+        guard let runner = await runnerManager.getRunner(runnerId: originalState.runnerId) else {
+            throw ConversationError.runnerNotFound(originalState.runnerId)
+        }
+
+        let newConversationId = UUID().uuidString
+
+        // Deep copy the history
+        let newHistory = originalState.history
+
+        // Create new conversation with copied history
+        let newConversation = Conversation(modelRunner: runner, history: newHistory)
+
+        let newState = ConversationState(
+            runnerId: originalState.runnerId,
+            conversation: newConversation,
+            history: newHistory
+        )
+
+        conversations[newConversationId] = newState
+        return newConversationId
+    }
+
     /// Exports a conversation as JSON.
     func exportConversation(_ conversationId: String) throws -> String {
         guard let state = conversations[conversationId] else {

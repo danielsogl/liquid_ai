@@ -3,23 +3,26 @@ import 'model_runner.dart';
 
 /// Base class for load operation events.
 sealed class LoadEvent {
+  /// Creates a new [LoadEvent].
+  const LoadEvent();
+
   /// The unique operation identifier.
   String get operationId;
 }
 
 /// Event indicating load has started.
-class LoadStartedEvent extends LoadEvent {
+final class LoadStartedEvent extends LoadEvent {
   /// Creates a new [LoadStartedEvent].
-  LoadStartedEvent({required this.operationId});
+  const LoadStartedEvent({required this.operationId});
 
   @override
   final String operationId;
 }
 
 /// Event indicating load progress.
-class LoadProgressEvent extends LoadEvent {
+final class LoadProgressEvent extends LoadEvent {
   /// Creates a new [LoadProgressEvent].
-  LoadProgressEvent({required this.operationId, required this.progress});
+  const LoadProgressEvent({required this.operationId, required this.progress});
 
   @override
   final String operationId;
@@ -29,7 +32,7 @@ class LoadProgressEvent extends LoadEvent {
 }
 
 /// Event indicating load completed successfully.
-class LoadCompleteEvent extends LoadEvent {
+final class LoadCompleteEvent extends LoadEvent {
   /// Creates a new [LoadCompleteEvent].
   LoadCompleteEvent({required this.operationId, required this.runner});
 
@@ -41,9 +44,9 @@ class LoadCompleteEvent extends LoadEvent {
 }
 
 /// Event indicating load failed.
-class LoadErrorEvent extends LoadEvent {
+final class LoadErrorEvent extends LoadEvent {
   /// Creates a new [LoadErrorEvent].
-  LoadErrorEvent({required this.operationId, required this.error});
+  const LoadErrorEvent({required this.operationId, required this.error});
 
   @override
   final String operationId;
@@ -53,9 +56,9 @@ class LoadErrorEvent extends LoadEvent {
 }
 
 /// Event indicating load was cancelled.
-class LoadCancelledEvent extends LoadEvent {
+final class LoadCancelledEvent extends LoadEvent {
   /// Creates a new [LoadCancelledEvent].
-  LoadCancelledEvent({required this.operationId});
+  const LoadCancelledEvent({required this.operationId});
 
   @override
   final String operationId;
