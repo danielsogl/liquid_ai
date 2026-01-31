@@ -1,0 +1,52 @@
+version: 2
+updates:
+  # Dart/Flutter dependencies
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      flutter-sdk:
+        patterns:
+          - "flutter*"
+      linting:
+        patterns:
+          - "*lint*"
+          - "analyzer*"
+      testing:
+        patterns:
+          - "test*"
+          - "mock*"
+          - "fake*"
+      http:
+        patterns:
+          - "http*"
+          - "dio*"
+      json:
+        patterns:
+          - "json*"
+          - "*json"
+      logging:
+        patterns:
+          - "logger*"
+          - "logging*"
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
