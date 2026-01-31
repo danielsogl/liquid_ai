@@ -1,10 +1,10 @@
 /// The reason generation finished.
 enum GenerationFinishReason {
-  /// Generation completed normally (end of sequence).
-  endOfSequence,
+  /// Generation completed normally (stop token reached).
+  stop,
 
-  /// Generation stopped due to max tokens limit.
-  maxTokens,
+  /// Generation stopped due to exceeding context length.
+  exceedContext,
 
   /// Generation was stopped by user request.
   stopped,

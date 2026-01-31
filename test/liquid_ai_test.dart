@@ -129,9 +129,9 @@ void main() {
     });
 
     group('getModelStatus', () {
-      test('returns notDownloaded for new model', () async {
+      test('returns notOnLocal for new model', () async {
         final status = await liquidAi.getModelStatus('lfm2-350m', 'q4_k_m');
-        expect(status.type, ModelStatusType.notDownloaded);
+        expect(status.type, ModelStatusType.notOnLocal);
       });
 
       test('returns downloaded for downloaded model', () async {

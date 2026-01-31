@@ -1,10 +1,10 @@
 /// The download status of a model.
 enum ModelStatusType {
-  /// Model is not downloaded.
-  notDownloaded,
+  /// Model is not on local storage.
+  notOnLocal,
 
   /// Model download is in progress.
-  downloading,
+  downloadInProgress,
 
   /// Model is downloaded and available locally.
   downloaded,
@@ -20,8 +20,8 @@ class ModelStatus {
     final typeStr = map['type'] as String;
     final type = switch (typeStr) {
       'downloaded' => ModelStatusType.downloaded,
-      'downloading' => ModelStatusType.downloading,
-      _ => ModelStatusType.notDownloaded,
+      'downloadInProgress' => ModelStatusType.downloadInProgress,
+      _ => ModelStatusType.notOnLocal,
     };
     return ModelStatus(
       type: type,
@@ -39,7 +39,7 @@ class ModelStatus {
   bool get isDownloaded => type == ModelStatusType.downloaded;
 
   /// Whether the model is currently downloading.
-  bool get isDownloading => type == ModelStatusType.downloading;
+  bool get isDownloading => type == ModelStatusType.downloadInProgress;
 
   /// Converts this status to a map.
   Map<String, dynamic> toMap() {

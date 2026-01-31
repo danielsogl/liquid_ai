@@ -5,8 +5,8 @@ void main() {
   group('GenerationFinishReason', () {
     test('has correct values', () {
       expect(GenerationFinishReason.values, hasLength(5));
-      expect(GenerationFinishReason.endOfSequence.name, 'endOfSequence');
-      expect(GenerationFinishReason.maxTokens.name, 'maxTokens');
+      expect(GenerationFinishReason.stop.name, 'stop');
+      expect(GenerationFinishReason.exceedContext.name, 'exceedContext');
       expect(GenerationFinishReason.stopped.name, 'stopped');
       expect(GenerationFinishReason.functionCall.name, 'functionCall');
       expect(GenerationFinishReason.error.name, 'error');
@@ -155,13 +155,13 @@ void main() {
             {'type': 'text', 'text': 'Hello!'},
           ],
         },
-        'finishReason': 'endOfSequence',
+        'finishReason': 'stop',
         'stats': {'tokenCount': 100, 'tokensPerSecond': 50.0},
       });
       expect(event, isA<GenerationCompleteEvent>());
       final completeEvent = event as GenerationCompleteEvent;
       expect(completeEvent.message.text, 'Hello!');
-      expect(completeEvent.finishReason, GenerationFinishReason.endOfSequence);
+      expect(completeEvent.finishReason, GenerationFinishReason.stop);
       expect(completeEvent.stats?.tokenCount, 100);
     });
 
@@ -175,11 +175,11 @@ void main() {
             {'type': 'text', 'text': 'Done'},
           ],
         },
-        'finishReason': 'maxTokens',
+        'finishReason': 'exceedContext',
       });
       expect(event, isA<GenerationCompleteEvent>());
       final completeEvent = event as GenerationCompleteEvent;
-      expect(completeEvent.finishReason, GenerationFinishReason.maxTokens);
+      expect(completeEvent.finishReason, GenerationFinishReason.exceedContext);
       expect(completeEvent.stats, isNull);
     });
   });

@@ -538,9 +538,9 @@ extension ModelDownloader.ModelDownloadStatusType {
     var description: String {
         switch self {
         case .notOnLocal:
-            return "notDownloaded"
+            return "notOnLocal"
         case .downloadInProgress:
-            return "downloading"
+            return "downloadInProgress"
         case .downloaded:
             return "downloaded"
         }

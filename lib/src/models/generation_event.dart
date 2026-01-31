@@ -250,10 +250,10 @@ class GenerationToolResultEvent extends GenerationEvent {
 
 GenerationFinishReason _parseFinishReason(String reason) {
   switch (reason) {
-    case 'endOfSequence':
-      return GenerationFinishReason.endOfSequence;
-    case 'maxTokens':
-      return GenerationFinishReason.maxTokens;
+    case 'stop':
+      return GenerationFinishReason.stop;
+    case 'exceedContext':
+      return GenerationFinishReason.exceedContext;
     case 'stopped':
       return GenerationFinishReason.stopped;
     case 'functionCall':
@@ -261,6 +261,6 @@ GenerationFinishReason _parseFinishReason(String reason) {
     case 'error':
       return GenerationFinishReason.error;
     default:
-      return GenerationFinishReason.endOfSequence;
+      return GenerationFinishReason.stop;
   }
 }

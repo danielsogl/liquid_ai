@@ -205,7 +205,7 @@ class ConversationManager(
                             progressHandler.sendComplete(
                                 generationId = generationId,
                                 message = serializeChatMessage(assistantMessage),
-                                finishReason = "endOfSequence",
+                                finishReason = "stop",
                                 stats = mapOf(
                                     "tokenCount" to tokenCount,
                                     "tokensPerSecond" to tokensPerSecond,

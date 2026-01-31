@@ -81,7 +81,7 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
       'getModelStatus',
       {'model': model, 'quantization': quantization},
     );
-    return ModelStatus.fromMap(statusMap ?? {'type': 'notDownloaded'});
+    return ModelStatus.fromMap(statusMap ?? {'type': 'notOnLocal'});
   }
 
   @override

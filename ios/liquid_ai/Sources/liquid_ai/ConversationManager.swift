@@ -516,11 +516,11 @@ actor ConversationManager {
     static func mapFinishReason(_ reason: GenerationFinishReason) -> String {
         switch reason {
         case .stop:
-            return "endOfSequence"
+            return "stop"
         case .exceed_context:
-            return "maxTokens"
+            return "exceedContext"
         @unknown default:
-            return "endOfSequence"
+            return "stop"
         }
     }
 }

@@ -171,7 +171,7 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
     fun getModelStatus(model: String, quantization: String): Map<String, Any> {
         val isDownloaded = isModelDownloaded(model, quantization)
         return mapOf(
-            "type" to if (isDownloaded) "downloaded" else "notDownloaded",
+            "type" to if (isDownloaded) "downloaded" else "notOnLocal",
             "progress" to if (isDownloaded) 1.0 else 0.0
         )
     }

@@ -4,19 +4,19 @@ import 'package:liquid_ai/liquid_ai.dart';
 void main() {
   group('ModelStatus', () {
     test('creates with default progress', () {
-      const status = ModelStatus(type: ModelStatusType.notDownloaded);
+      const status = ModelStatus(type: ModelStatusType.notOnLocal);
 
-      expect(status.type, ModelStatusType.notDownloaded);
+      expect(status.type, ModelStatusType.notOnLocal);
       expect(status.progress, 0.0);
     });
 
     test('creates with custom progress', () {
       const status = ModelStatus(
-        type: ModelStatusType.downloading,
+        type: ModelStatusType.downloadInProgress,
         progress: 0.5,
       );
 
-      expect(status.type, ModelStatusType.downloading);
+      expect(status.type, ModelStatusType.downloadInProgress);
       expect(status.progress, 0.5);
     });
 
@@ -32,7 +32,7 @@ void main() {
 
     test('isDownloading returns true when downloading', () {
       const status = ModelStatus(
-        type: ModelStatusType.downloading,
+        type: ModelStatusType.downloadInProgress,
         progress: 0.5,
       );
 
@@ -50,30 +50,30 @@ void main() {
       expect(status.progress, 1.0);
     });
 
-    test('fromMap parses downloading status', () {
+    test('fromMap parses downloadInProgress status', () {
       final status = ModelStatus.fromMap({
-        'type': 'downloading',
+        'type': 'downloadInProgress',
         'progress': 0.5,
       });
 
-      expect(status.type, ModelStatusType.downloading);
+      expect(status.type, ModelStatusType.downloadInProgress);
       expect(status.progress, 0.5);
     });
 
-    test('fromMap parses notDownloaded status', () {
+    test('fromMap parses notOnLocal status', () {
       final status = ModelStatus.fromMap({
-        'type': 'notDownloaded',
+        'type': 'notOnLocal',
         'progress': 0.0,
       });
 
-      expect(status.type, ModelStatusType.notDownloaded);
+      expect(status.type, ModelStatusType.notOnLocal);
       expect(status.progress, 0.0);
     });
 
-    test('fromMap handles unknown type as notDownloaded', () {
+    test('fromMap handles unknown type as notOnLocal', () {
       final status = ModelStatus.fromMap({'type': 'unknown', 'progress': 0.0});
 
-      expect(status.type, ModelStatusType.notDownloaded);
+      expect(status.type, ModelStatusType.notOnLocal);
     });
 
     test('fromMap handles missing progress', () {
@@ -90,13 +90,13 @@ void main() {
 
     test('toMap converts to map', () {
       const status = ModelStatus(
-        type: ModelStatusType.downloading,
+        type: ModelStatusType.downloadInProgress,
         progress: 0.5,
       );
 
       final map = status.toMap();
 
-      expect(map['type'], 'downloading');
+      expect(map['type'], 'downloadInProgress');
       expect(map['progress'], 0.5);
     });
 

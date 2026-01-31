@@ -239,7 +239,7 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
     return ModelStatus(
       type: isDownloaded
           ? ModelStatusType.downloaded
-          : ModelStatusType.notDownloaded,
+          : ModelStatusType.notOnLocal,
       progress: isDownloaded ? 1.0 : 0.0,
     );
   }
@@ -380,7 +380,7 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
       'generationId': generationId,
       'type': 'complete',
       'message': responseMessage,
-      'finishReason': 'endOfSequence',
+      'finishReason': 'stop',
       'stats': {'tokenCount': 4, 'tokensPerSecond': 100.0},
     });
   }

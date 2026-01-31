@@ -162,7 +162,7 @@ void main() {
           });
 
       final status = await platform.getModelStatus('lfm2-350m', 'q4_k_m');
-      expect(status.type, ModelStatusType.notDownloaded);
+      expect(status.type, ModelStatusType.notOnLocal);
     });
   });
 }
