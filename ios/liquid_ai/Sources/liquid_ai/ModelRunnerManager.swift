@@ -1,6 +1,7 @@
 import Foundation
 import LeapSDK
 import LeapModelDownloader
+import Metal
 
 /// Manages model runners and download operations.
 actor ModelRunnerManager {
@@ -110,6 +111,8 @@ actor ModelRunnerManager {
         let operationId = UUID().uuidString
         cancelledOperations.remove(operationId)
 
+        print("[LiquidAI] loadModel: Starting load for \(model)/\(quantization)")
+
         progressHandler.sendProgress(
             operationId: operationId,
             type: .load,
@@ -217,11 +220,38 @@ actor ModelRunnerManager {
     // MARK: - Unload Model
 
     /// Unloads a previously loaded model runner.
+    ///
+    /// This method ensures Metal GPU memory is properly released before returning
+    /// by synchronizing with the Metal device and waiting for memory cleanup.
     func unloadModel(runnerId: String) async -> Bool {
         guard let runner = runners.removeValue(forKey: runnerId) else {
+            print("[LiquidAI] unloadModel: Runner not found for id \(runnerId)")
             return false
         }
+
+        print("[LiquidAI] unloadModel: Starting unload for runner \(runnerId)")
+
+        // Unload the model
         await runner.unload()
+        print("[LiquidAI] unloadModel: runner.unload() completed")
+
+        // Force synchronization with Metal device
+        if let device = MTLCreateSystemDefaultDevice() {
+            if let commandQueue = device.makeCommandQueue(),
+               let commandBuffer = commandQueue.makeCommandBuffer() {
+                commandBuffer.commit()
+                commandBuffer.waitUntilCompleted()
+            }
+            print("[LiquidAI] unloadModel: Metal sync completed")
+        }
+
+        // Wait for system to fully release GPU memory.
+        // Metal memory deallocation can be significantly deferred by the system,
+        // especially on memory-constrained devices.
+        print("[LiquidAI] unloadModel: Waiting 1 second for memory cleanup...")
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        print("[LiquidAI] unloadModel: Wait completed, returning")
+
         return true
     }
 

@@ -298,11 +298,8 @@ class _ChatScreenState extends State<ChatScreen> {
               alignment: WrapAlignment.center,
               children: loadedModels.map((model) {
                 return FilledButton.tonal(
-                  onPressed: () => _loadAndInitializeModel(
-                    model,
-                    chatState,
-                    downloadState,
-                  ),
+                  onPressed: () =>
+                      _loadAndInitializeModel(model, chatState, downloadState),
                   child: Text(model.name),
                 );
               }).toList(),
@@ -586,6 +583,10 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    // Dispose old runner BEFORE loading new one to avoid having both models
+    // in memory simultaneously, which can exceed memory limits
+    await chatState.runner?.dispose();
+
     final runner = await downloadState.loadModel(model.slug, quant.slug);
 
     if (runner != null) {
@@ -596,6 +597,8 @@ class _ChatScreenState extends State<ChatScreen> {
         ).showSnackBar(SnackBar(content: Text('Switched to ${model.name}')));
       }
     } else if (mounted) {
+      // Reset state since we disposed the old runner but failed to load new one
+      chatState.reset();
       final error = downloadState.loadErrorMessage ?? 'Failed to load model';
       ScaffoldMessenger.of(
         context,

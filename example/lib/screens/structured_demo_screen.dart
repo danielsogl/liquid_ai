@@ -82,7 +82,8 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
 
       // Include schema in system prompt for better model alignment
       final schemaJson = _currentDemo.schema.toJsonString();
-      final systemPrompt = '''You are a helpful assistant that always responds in valid JSON format.
+      final systemPrompt =
+          '''You are a helpful assistant that always responds in valid JSON format.
 Your response must exactly match this JSON schema:
 $schemaJson
 
@@ -135,7 +136,8 @@ Important:
           case StructuredCancelledEvent():
             if (event.partialResponse != null) {
               setState(() {
-                _generatedJson = 'Cancelled. Partial response:\n'
+                _generatedJson =
+                    'Cancelled. Partial response:\n'
                     '${event.partialResponse}';
               });
             }
@@ -425,6 +427,10 @@ Important:
       return;
     }
 
+    // Dispose old runner BEFORE loading new one to avoid having both models
+    // in memory simultaneously, which can exceed memory limits
+    await chatState.runner?.dispose();
+
     final runner = await downloadState.loadModel(model.slug, quant.slug);
 
     if (runner != null) {
@@ -435,6 +441,8 @@ Important:
         ).showSnackBar(SnackBar(content: Text('Switched to ${model.name}')));
       }
     } else if (mounted) {
+      // Reset state since we disposed the old runner but failed to load new one
+      chatState.reset();
       final error = downloadState.loadErrorMessage ?? 'Failed to load model';
       ScaffoldMessenger.of(
         context,
@@ -475,9 +483,9 @@ Important:
 
   Widget _buildSchemaCard() {
     // Format the JSON schema for display
-    final schemaJson = const JsonEncoder.withIndent('  ').convert(
-      _currentDemo.schema.toMap(),
-    );
+    final schemaJson = const JsonEncoder.withIndent(
+      '  ',
+    ).convert(_currentDemo.schema.toMap());
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -598,7 +606,9 @@ Important:
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: _errorMessage!));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Error copied to clipboard')),
+                      const SnackBar(
+                        content: Text('Error copied to clipboard'),
+                      ),
                     );
                   },
                 ),

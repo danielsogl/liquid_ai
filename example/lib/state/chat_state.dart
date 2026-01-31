@@ -144,6 +144,9 @@ class ChatState extends ChangeNotifier {
   ///
   /// Note: The new model won't have the previous conversation context,
   /// but the UI will still show the message history.
+  ///
+  /// The old runner should be disposed BEFORE calling this method to avoid
+  /// having both models in memory simultaneously.
   Future<void> switchModel(
     ModelRunner runner, {
     LeapModel? model,
@@ -158,8 +161,8 @@ class ChatState extends ChangeNotifier {
     await _conversation?.dispose();
     _conversation = null;
 
-    // Dispose old runner to free memory before loading new one
-    await _runner?.dispose();
+    // Clear reference (runner should already be disposed by caller to free
+    // memory before loading new model)
     _runner = null;
 
     await initialize(

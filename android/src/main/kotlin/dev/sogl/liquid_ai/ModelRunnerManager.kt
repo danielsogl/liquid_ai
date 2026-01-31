@@ -141,11 +141,20 @@ class ModelRunnerManager(private val progressHandler: DownloadProgressHandler) {
     // MARK: - Unload Model
 
     /// Unloads a previously loaded model runner.
-    fun unloadModel(runnerId: String): Boolean {
+    ///
+    /// This is a suspend function that waits for the unload to complete
+    /// to ensure memory is actually released before returning.
+    suspend fun unloadModel(runnerId: String): Boolean {
         val runner = runners.remove(runnerId) ?: return false
-        scope.launch {
-            runner.unload()
-        }
+        runner.unload()
+
+        // Request garbage collection to help release native memory
+        System.gc()
+
+        // Wait for system to fully release memory
+        // Native memory deallocation can be deferred by the system
+        delay(500)
+
         return true
     }
 
