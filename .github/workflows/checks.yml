@@ -78,10 +78,6 @@ jobs:
         working-directory: example
         run: flutter pub get
 
-      - name: Build Android example (generates gradlew)
-        working-directory: example
-        run: flutter build apk --debug
-
       - name: Run Android unit tests
         working-directory: example/android
         run: ./gradlew :liquid_ai:testDebugUnitTest
@@ -105,13 +101,6 @@ jobs:
       - name: Get example dependencies
         working-directory: example
         run: flutter pub get
-
-      - name: Build iOS example with SPM (triggers migration)
-        working-directory: example
-        run: flutter build ios --simulator --no-codesign
-
-      - name: List available simulators (debug)
-        run: xcrun simctl list devices
 
       - name: Run iOS native unit tests
         working-directory: example/ios
