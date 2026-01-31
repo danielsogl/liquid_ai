@@ -15,40 +15,61 @@ const _standardQuantizations = [
 ///
 /// Model slugs use the format expected by the LEAP SDK (e.g., "LFM2-350M").
 const List<LeapModel> leapModelCatalog = [
-  // 350M Models
+  // ============================================================
+  // 350M Models - Ultra-compact for edge devices
+  // ============================================================
   LeapModel(
     slug: 'LFM2-350M',
     name: 'LFM2-350M',
     description:
-        'Our smallest model for edge devices and low latency deployments. '
-        'Fastest inference speed.',
+        'Ultra-compact 350M parameter model for edge devices and low latency '
+        'deployments. Minimal memory and compute footprint with fastest '
+        'inference in the LFM family. Runs on IoT and embedded devices.',
     parameters: '350M',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
-    contextLength: 4096,
+    contextLength: 32768,
     updatedAt: '2025-07-10',
   ),
   LeapModel(
     slug: 'LFM2-350M-Extract',
     name: 'LFM2-350M Extract',
     description:
-        'Fine-tuned for structured data extraction from unstructured text. '
-        'Outputs data in JSON format for easy integration.',
+        'Quickest extraction model for edge environments with severe memory '
+        'and processing limitations. Extracts structured data (JSON, XML, YAML) '
+        'from unstructured text with minimal response time.',
     parameters: '350M',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.extraction,
     updatedAt: '2025-09-09',
+  ),
+  LeapModel(
+    slug: 'LFM2-350M-Math',
+    name: 'LFM2-350M Math',
+    description:
+        'Compact reasoning model designed for mathematical problem solving. '
+        'Offers step-by-step solutions optimized for edge deployment and '
+        'educational applications including tutoring.',
+    parameters: '350M',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    contextLength: 32768,
+    task: ModelTask.reasoning,
+    updatedAt: '2025-08-19',
   ),
   LeapModel(
     slug: 'LFM2-350M-ENJP-MT',
     name: 'LFM2-350M EN-JP Translation',
     description:
-        'Fine-tuned for bi-directional Japanese/English translation. '
-        'Supports both English to Japanese and Japanese to English.',
+        'Specialized translation model for near real-time bidirectional '
+        'Japanese/English translation. Optimized for short-to-medium text '
+        'with minimal latency on edge devices.',
     parameters: '350M',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.translation,
     languages: ['en', 'ja'],
     updatedAt: '2025-09-04',
@@ -57,171 +78,274 @@ const List<LeapModel> leapModelCatalog = [
     slug: 'LFM2-350M-PII-Extract-JP',
     name: 'LFM2-350M PII Extract (Japanese)',
     description:
-        'Extracts Personally Identifiable Information (PII) from Japanese '
-        'text. Outputs detected PII entities in JSON format for redaction.',
+        'Compact Japanese language model for extracting personally identifiable '
+        'information (PII) as structured JSON. Detects addresses, company names, '
+        'emails, human names, and phone numbers for privacy-preserving masking.',
     parameters: '350M',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.piiExtraction,
     languages: ['ja'],
+    updatedAt: '2025-10-10',
   ),
 
-  // 700M Models
+  // ============================================================
+  // 450M Models - Vision-Language (compact)
+  // ============================================================
+  LeapModel(
+    slug: 'LFM2-VL-450M',
+    name: 'LFM2-VL-450M',
+    description:
+        'Compact 450M vision-language model for edge deployment and fast '
+        'inference. Designed for resource-constrained environments with '
+        'minimal memory requirements. Supports vision-language chat.',
+    parameters: '450M',
+    modalities: [ModelModality.text, ModelModality.image],
+    quantizations: _standardQuantizations,
+    contextLength: 32768,
+    updatedAt: '2025-08-27',
+  ),
+
+  // ============================================================
+  // 600M Models - Third-party (Qwen)
+  // ============================================================
+  LeapModel(
+    slug: 'Qwen3-0.6B',
+    name: 'Qwen3-0.6B',
+    description:
+        'Latest generation Qwen model offering groundbreaking advancements '
+        'in reasoning, instruction-following, agent capabilities, and '
+        'multilingual support. Ultra-compact for edge deployment.',
+    parameters: '0.6B',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    contextLength: 32768,
+    updatedAt: '2025-06-30',
+  ),
+
+  // ============================================================
+  // 700M Models - Balanced efficiency
+  // ============================================================
   LeapModel(
     slug: 'LFM2-700M',
     name: 'LFM2-700M',
     description:
-        'Mid sized model for deploying on most devices. '
-        'Good balance of speed and capability.',
+        'Compact model balancing capability and efficiency. Suitable for '
+        'deployment on phones, tablets, and laptops with limited resources. '
+        'Fast inference for real-time applications.',
     parameters: '700M',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
-    contextLength: 4096,
+    contextLength: 32768,
     updatedAt: '2025-07-10',
   ),
 
-  // 1.2B Models (Legacy)
-  LeapModel(
-    slug: 'LFM2-1.2B',
-    name: 'LFM2-1.2B',
-    description: 'Use the new LFM2.5-1.2B-Instruct checkpoint instead.',
-    parameters: '1.2B',
-    modalities: [ModelModality.text],
-    quantizations: _standardQuantizations,
-    contextLength: 4096,
-    updatedAt: '2025-07-10',
-    isDeprecated: true,
-  ),
+  // ============================================================
+  // 1.2B Models - General purpose and specialized
+  // ============================================================
   LeapModel(
     slug: 'LFM2-1.2B-Extract',
     name: 'LFM2-1.2B Extract',
     description:
-        'Fine-tuned for structured data extraction from unstructured input. '
-        'Higher capacity than 350M variant for complex extraction tasks.',
+        'Extracts structured data (JSON, XML, YAML) from unstructured '
+        'documents with support for complex nested schemas. Ideal for '
+        'document field extraction and automated form filling.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.extraction,
-    updatedAt: '2025-09-09',
+    updatedAt: '2025-08-19',
   ),
   LeapModel(
     slug: 'LFM2-1.2B-RAG',
     name: 'LFM2-1.2B RAG',
     description:
-        'Fine-tuned for retrieval-augmented generation use cases. '
-        'Optimized to work with retrieved context for accurate responses.',
+        'Optimized for answering questions grounded in provided context '
+        'documents. Excels at extracting relevant information while '
+        'minimizing hallucination for knowledge base querying.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.rag,
-    updatedAt: '2025-09-12',
+    updatedAt: '2025-08-19',
   ),
   LeapModel(
     slug: 'LFM2-1.2B-Tool',
     name: 'LFM2-1.2B Tool',
     description:
-        'Fine-tuned for function-calling use cases in agentic workflows. '
-        'Reliably generates structured function calls and handles responses.',
+        'Compact model for efficient and precise tool calling. '
+        'Use LFM2.5-1.2B-Instruct instead for better tool calling '
+        'performance alongside general chat capabilities.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.toolUse,
-    updatedAt: '2025-09-12',
+    updatedAt: '2025-08-19',
+    isDeprecated: true,
   ),
 
-  // LFM2.5 1.2B Models (Latest)
+  // ============================================================
+  // LFM2.5 1.2B Models (Latest generation)
+  // ============================================================
   LeapModel(
     slug: 'LFM2.5-1.2B-Instruct',
     name: 'LFM2.5-1.2B Instruct',
     description:
-        'Instruction-tuned for chat. Best for most use cases. '
-        'Recommended model for general-purpose applications.',
+        'Instruction-tuned 1.2B parameter model optimized for chat, '
+        'instruction-following, and tool-calling tasks. Built on the '
+        'LFM2.5 architecture with extended pre-training and RL.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
-    contextLength: 4096,
-    updatedAt: '2026-01-15',
+    contextLength: 32768,
+    updatedAt: '2025-01-05',
   ),
   LeapModel(
     slug: 'LFM2.5-1.2B-Thinking',
     name: 'LFM2.5-1.2B Thinking',
     description:
-        'Optimized for math and logical problem-solving. '
-        'Enhanced reasoning capabilities for complex tasks.',
+        'General-purpose text model with stellar performance in instruction '
+        'following, tool-use, and math capabilities. Recommended for agentic '
+        'tasks, data extraction, and RAG. Not for knowledge-intensive tasks.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.reasoning,
-    contextLength: 4096,
-    updatedAt: '2026-01-15',
+    updatedAt: '2025-01-20',
   ),
   LeapModel(
     slug: 'LFM2.5-1.2B-JP',
     name: 'LFM2.5-1.2B Japanese',
     description:
-        'Fine-tuned model for high-quality Japanese text generation. '
-        'Optimized for Japanese language tasks.',
+        'Japanese-specialized 1.2B parameter model for high-quality Japanese '
+        'text generation. Ideal for building Japanese-language applications '
+        'where cultural and linguistic nuance matter.',
     parameters: '1.2B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     languages: ['ja'],
-    contextLength: 4096,
-    updatedAt: '2026-01-15',
+    updatedAt: '2025-01-05',
   ),
 
-  // 2.6B Models
+  // ============================================================
+  // 1.5B Models - Audio
+  // ============================================================
+  LeapModel(
+    slug: 'LFM2.5-Audio-1.5B',
+    name: 'LFM2.5-Audio-1.5B',
+    description:
+        'End-to-end multimodal speech and text language model for TTS, ASR, '
+        'and voice chat. Does not require separate ASR and TTS components. '
+        'Designed for low latency real-time conversation at 24kHz audio.',
+    parameters: '1.5B',
+    modalities: [ModelModality.text, ModelModality.audio],
+    quantizations: _standardQuantizations,
+    contextLength: 32768,
+    languages: ['en'],
+    updatedAt: '2025-01-06',
+  ),
+
+  // ============================================================
+  // 1.6B Models - Vision-Language
+  // ============================================================
+  LeapModel(
+    slug: 'LFM2.5-VL-1.6B',
+    name: 'LFM2.5-VL-1.6B',
+    description:
+        'Best-in-class 1.6B vision-language model for multimodal understanding. '
+        'Refreshed version with updated backbone (LFM2.5-1.2B-Base), tuned for '
+        'stronger real-world performance on-device.',
+    parameters: '1.6B',
+    modalities: [ModelModality.text, ModelModality.image],
+    quantizations: _standardQuantizations,
+    contextLength: 32768,
+    updatedAt: '2025-01-06',
+  ),
+
+  // ============================================================
+  // 1.7B Models - Third-party (Qwen)
+  // ============================================================
+  LeapModel(
+    slug: 'Qwen3-1.7B',
+    name: 'Qwen3-1.7B',
+    description:
+        'Latest generation Qwen model offering groundbreaking advancements '
+        'in reasoning, instruction-following, agent capabilities, and '
+        'multilingual support. Balanced size for on-device deployment.',
+    parameters: '1.7B',
+    modalities: [ModelModality.text],
+    quantizations: _standardQuantizations,
+    contextLength: 32768,
+    updatedAt: '2025-06-30',
+  ),
+
+  // ============================================================
+  // 2.6B Models - High capability
+  // ============================================================
   LeapModel(
     slug: 'LFM2-2.6B',
     name: 'LFM2-2.6B',
     description:
-        'Larger hybrid model specifically designed for edge AI deployment. '
-        'Offers improved quality while maintaining efficient inference.',
+        'Highly capable 2.6B parameter model for deployment on most phones '
+        'and laptops. Versatile mid-sized model with strong performance in '
+        'chat, reasoning, and tool-calling applications.',
     parameters: '2.6B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     updatedAt: '2025-09-23',
   ),
   LeapModel(
     slug: 'LFM2-2.6B-Exp',
     name: 'LFM2-2.6B Experimental',
     description:
-        'Experimental checkpoint built using pure reinforcement learning. '
-        'May exhibit different behavior than standard training approaches.',
+        'RL-only post-trained 2.6B model with improved math and reasoning. '
+        'IFBench score surpasses DeepSeek R1-0528, a model 263 times larger. '
+        'Specifically trained on instruction following, knowledge, and math.',
     parameters: '2.6B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
+    task: ModelTask.reasoning,
     updatedAt: '2025-12-26',
   ),
   LeapModel(
     slug: 'LFM2-2.6B-Transcript',
     name: 'LFM2-2.6B Transcript',
     description:
-        'Designed for private, on-device meeting summarization. '
-        'Processes meeting transcripts to generate concise summaries.',
+        'Designed for private, on-device meeting summarization from transcripts. '
+        'Produces executive summaries, detailed summaries, action items, key '
+        'decisions, and participant lists.',
     parameters: '2.6B',
     modalities: [ModelModality.text],
     quantizations: _standardQuantizations,
+    contextLength: 32768,
     task: ModelTask.summarization,
-    updatedAt: '2026-01-07',
+    updatedAt: '2025-01-07',
   ),
 
-  // 8B Models (Mixture of Experts)
+  // ============================================================
+  // 3B Models - Vision-Language (high capacity)
+  // ============================================================
   LeapModel(
-    slug: 'LFM2-8B-A1B',
-    name: 'LFM2-8B-A1B',
+    slug: 'LFM2-VL-3B',
+    name: 'LFM2-VL-3B',
     description:
-        'Mixture-of-experts model for on-device speed and quality. '
-        '8B total parameters with 1.5B active per inference.',
-    parameters: '8B',
-    modalities: [ModelModality.text],
+        'Highest-capacity 3B vision-language model with enhanced visual '
+        'reasoning. Advanced document and chart interpretation with '
+        'multi-image comparison and reasoning across multiple images.',
+    parameters: '3B',
+    modalities: [ModelModality.text, ModelModality.image],
     quantizations: _standardQuantizations,
-    contextLength: 4096,
-    updatedAt: '2026-01-15',
+    contextLength: 32768,
+    updatedAt: '2025-10-22',
   ),
-
-  // NOTE: Vision and Audio models are not yet available on LEAP Edge SDK.
-  // They can be run via llama.cpp/MLX on desktop but not through the iOS SDK.
-  // When they become available, add them here with ModelModality.image/audio.
 ];
 
 /// Helper class for querying the model catalog.
@@ -272,4 +396,16 @@ class ModelCatalog {
   /// Returns specialized (fine-tuned) models only.
   static List<LeapModel> get specialized =>
       leapModelCatalog.where((m) => !m.isGeneralPurpose).toList();
+
+  /// Returns vision-language models.
+  static List<LeapModel> get visionModels =>
+      byModality(ModelModality.image);
+
+  /// Returns audio models.
+  static List<LeapModel> get audioModels =>
+      byModality(ModelModality.audio);
+
+  /// Returns Liquid AI native models only (excludes third-party like Qwen).
+  static List<LeapModel> get liquidModels =>
+      leapModelCatalog.where((m) => m.slug.startsWith('LFM')).toList();
 }
