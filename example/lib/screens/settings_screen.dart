@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:liquid_ai/liquid_ai.dart';
+import 'package:provider/provider.dart';
+
+import '../state/chat_state.dart';
+import '../state/download_state.dart';
+import '../state/tools_state.dart';
 
 /// Screen displaying app settings.
 class SettingsScreen extends StatelessWidget {
@@ -12,7 +17,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           const _SectionHeader(title: 'About'),
-          _AboutTile(),
+          const _AboutTile(),
           const Divider(),
           const _SectionHeader(title: 'Storage'),
           ListTile(
@@ -29,7 +34,7 @@ class SettingsScreen extends StatelessWidget {
   void _showClearDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Clear All Models'),
         content: const Text(
           'Are you sure you want to delete all downloaded models? '
@@ -37,21 +42,54 @@ class SettingsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Models cleared')));
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _clearAllModels(context);
             },
             child: const Text('Clear'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _clearAllModels(BuildContext context) async {
+    final downloadState = context.read<DownloadState>();
+    final chatState = context.read<ChatState>();
+    final toolsState = context.read<ToolsState>();
+
+    // Reset chat and tools state first
+    chatState.reset();
+    toolsState.reset();
+
+    // Unload any currently loaded model
+    await ModelManager.instance.unloadCurrentModel();
+
+    // Delete all downloaded models
+    var deletedCount = 0;
+    for (final model in downloadState.models) {
+      final modelState = downloadState.getModelState(model.slug);
+      if (modelState.status == ModelDownloadStatus.downloaded) {
+        await downloadState.deleteModel(model);
+        deletedCount++;
+      }
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            deletedCount > 0
+                ? 'Deleted $deletedCount model${deletedCount == 1 ? '' : 's'}'
+                : 'No models to delete',
+          ),
+        ),
+      );
+    }
   }
 }
 
@@ -74,11 +112,27 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _AboutTile extends StatelessWidget {
+class _AboutTile extends StatefulWidget {
+  const _AboutTile();
+
+  @override
+  State<_AboutTile> createState() => _AboutTileState();
+}
+
+class _AboutTileState extends State<_AboutTile> {
+  static final _liquidAi = LiquidAi();
+  Future<String?>? _platformVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    _platformVersion = _liquidAi.getPlatformVersion();
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<String?>(
-      future: LiquidAi().getPlatformVersion(),
+      future: _platformVersion,
       builder: (context, snapshot) {
         return ListTile(
           leading: const Icon(Icons.info_outline),

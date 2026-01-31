@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 
 import '../state/chat_state.dart';
 import '../state/download_state.dart';
+import '../widgets/common_views.dart';
 import '../widgets/media_content.dart';
 import '../widgets/media_picker.dart';
+import '../widgets/model_selector.dart';
 
 /// Chat screen for interacting with a loaded model.
 class ChatScreen extends StatefulWidget {
@@ -203,33 +205,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildNoModelsView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.download_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No models available',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Download a model from the Models tab to start chatting.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return const NoModelsView(
+      message: 'Download a model from the Models tab to start chatting.',
     );
   }
 
@@ -238,75 +215,18 @@ class _ChatScreenState extends State<ChatScreen> {
     ChatState chatState,
   ) {
     final downloadState = context.watch<DownloadState>();
-    final isLoading = downloadState.isLoading;
 
-    if (isLoading) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Loading model...',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please wait while the model is loaded into memory.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
+    if (downloadState.isLoading) {
+      return const ModelLoadingView();
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.smart_toy_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Select a Model',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose a downloaded model to start a conversation.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: loadedModels.map((model) {
-                return FilledButton.tonal(
-                  onPressed: () =>
-                      _loadAndInitializeModel(model, chatState, downloadState),
-                  child: Text(model.name),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
+    return ModelSelectorView(
+      models: loadedModels,
+      icon: Icons.smart_toy_outlined,
+      title: 'Select a Model',
+      description: 'Choose a downloaded model to start a conversation.',
+      onModelSelected: (model) =>
+          _loadAndInitializeModel(model, chatState, downloadState),
     );
   }
 
@@ -315,27 +235,14 @@ class _ChatScreenState extends State<ChatScreen> {
     ChatState chatState,
     DownloadState downloadState,
   ) async {
-    final modelState = downloadState.getModelState(model.slug);
-    final quant = modelState.downloadedQuantization;
-
-    if (quant == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No quantization available')),
-        );
-      }
-      return;
-    }
-
-    final runner = await downloadState.loadModel(model.slug, quant.slug);
+    final runner = await loadAndInitializeModel(
+      context: context,
+      model: model,
+      downloadState: downloadState,
+    );
 
     if (runner != null) {
       await chatState.initialize(runner, model: model);
-    } else if (mounted) {
-      final error = downloadState.loadErrorMessage ?? 'Failed to load model';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -555,9 +462,10 @@ class _ChatScreenState extends State<ChatScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _ModelSwitcherSheet(
+      builder: (context) => ModelSwitcherSheet(
         models: loadedModels,
         currentModelSlug: currentSlug,
+        showModalityInfo: true,
         onModelSelected: (model) async {
           Navigator.pop(context);
           await _switchToModel(model, chatState, downloadState);
@@ -571,21 +479,11 @@ class _ChatScreenState extends State<ChatScreen> {
     ChatState chatState,
     DownloadState downloadState,
   ) async {
-    final modelState = downloadState.getModelState(model.slug);
-    final quant = modelState.downloadedQuantization;
-
-    if (quant == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No quantization available')),
-        );
-      }
-      return;
-    }
-
-    // ModelManager automatically unloads the previous model before loading
-    // the new one, preventing memory issues on native devices
-    final runner = await downloadState.loadModel(model.slug, quant.slug);
+    final runner = await loadAndInitializeModel(
+      context: context,
+      model: model,
+      downloadState: downloadState,
+    );
 
     if (runner != null) {
       await chatState.switchModel(runner, model: model);
@@ -595,12 +493,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ).showSnackBar(SnackBar(content: Text('Switched to ${model.name}')));
       }
     } else if (mounted) {
-      // Reset state since the load failed
       chatState.reset();
-      final error = downloadState.loadErrorMessage ?? 'Failed to load model';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 }
@@ -714,7 +607,7 @@ class _MessageBubble extends StatelessWidget {
 
   Widget _buildContent(BuildContext context, bool isUser) {
     if (message.isStreaming && message.content.isEmpty) {
-      return const _TypingIndicator();
+      return const TypingIndicator();
     }
 
     final contentWidgets = <Widget>[];
@@ -768,7 +661,7 @@ class _MessageBubble extends StatelessWidget {
       contentWidgets.add(
         Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: _StatsView(stats: message.stats!),
+          child: StatsView(stats: message.stats!),
         ),
       );
     }
@@ -785,106 +678,6 @@ class _MessageBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: contentWidgets,
-    );
-  }
-}
-
-class _StatsView extends StatelessWidget {
-  const _StatsView({required this.stats});
-
-  final GenerationStats stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <String>[];
-
-    // Tokens generated
-    items.add('${stats.tokenCount} tokens');
-
-    // Tokens per second
-    items.add('${stats.tokensPerSecond.toStringAsFixed(1)} tok/s');
-
-    // Prompt tokens if available
-    if (stats.promptTokenCount != null) {
-      items.add('${stats.promptTokenCount} prompt');
-    }
-
-    // Generation time if available
-    if (stats.generationTimeMs != null) {
-      final seconds = stats.generationTimeMs! / 1000;
-      items.add('${seconds.toStringAsFixed(2)}s');
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        items.join(' · '),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).colorScheme.outline,
-        ),
-      ),
-    );
-  }
-}
-
-class _TypingIndicator extends StatefulWidget {
-  const _TypingIndicator();
-
-  @override
-  State<_TypingIndicator> createState() => _TypingIndicatorState();
-}
-
-class _TypingIndicatorState extends State<_TypingIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (index) {
-            final delay = index * 0.2;
-            final opacity = (1 - ((_controller.value - delay) % 1.0).abs() * 2)
-                .clamp(0.3, 1.0);
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Opacity(
-                opacity: opacity,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            );
-          }),
-        );
-      },
     );
   }
 }
@@ -1101,106 +894,6 @@ class _SliderSetting extends StatelessWidget {
           onChanged: onChanged,
         ),
       ],
-    );
-  }
-}
-
-class _ModelSwitcherSheet extends StatelessWidget {
-  const _ModelSwitcherSheet({
-    required this.models,
-    required this.currentModelSlug,
-    required this.onModelSelected,
-  });
-
-  final List<LeapModel> models;
-  final String? currentModelSlug;
-  final void Function(LeapModel model) onModelSelected;
-
-  IconData _getModalityIcon(LeapModel model) {
-    if (model.supportsImage) return Icons.image;
-    if (model.supportsAudio) return Icons.mic;
-    return Icons.text_fields;
-  }
-
-  String _getModalityLabel(LeapModel model) {
-    final modalities = <String>[];
-    if (model.supportsText) modalities.add('Text');
-    if (model.supportsImage) modalities.add('Vision');
-    if (model.supportsAudio) modalities.add('Audio');
-    return modalities.join(' + ');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollController) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Switch Model',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Message history will be preserved, but the new model '
-                  'won\'t have previous context.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: models.length,
-                  itemBuilder: (context, index) {
-                    final model = models[index];
-                    final isSelected = model.slug == currentModelSlug;
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isSelected
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                        child: Icon(
-                          _getModalityIcon(model),
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.onPrimaryContainer
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      title: Text(model.name),
-                      subtitle: Text(_getModalityLabel(model)),
-                      trailing: isSelected
-                          ? Icon(
-                              Icons.check_circle,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                          : null,
-                      onTap: isSelected ? null : () => onModelSelected(model),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

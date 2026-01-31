@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../state/download_state.dart';
 import '../state/tools_state.dart';
+import '../widgets/common_views.dart';
+import '../widgets/model_selector.dart';
 
 /// Tools demo screen for demonstrating function calling.
 class ToolsScreen extends StatefulWidget {
@@ -139,33 +141,8 @@ class _ToolsScreenState extends State<ToolsScreen> {
   }
 
   Widget _buildNoModelsView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.download_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No models available',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Download a model from the Models tab to try tool calling.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return const NoModelsView(
+      message: 'Download a model from the Models tab to try tool calling.',
     );
   }
 
@@ -174,72 +151,18 @@ class _ToolsScreenState extends State<ToolsScreen> {
     ToolsState toolsState,
   ) {
     final downloadState = context.watch<DownloadState>();
-    final isLoading = downloadState.isLoading;
 
-    if (isLoading) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Loading model...',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please wait while the model is loaded into memory.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
+    if (downloadState.isLoading) {
+      return const ModelLoadingView();
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.build_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text('Tools Demo', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Select a model to try function calling with tools.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: loadedModels.map((model) {
-                return FilledButton.tonal(
-                  onPressed: () =>
-                      _loadAndInitializeModel(model, toolsState, downloadState),
-                  child: Text(model.name),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
+    return ModelSelectorView(
+      models: loadedModels,
+      icon: Icons.build_outlined,
+      title: 'Tools Demo',
+      description: 'Select a model to try function calling with tools.',
+      onModelSelected: (model) =>
+          _loadAndInitializeModel(model, toolsState, downloadState),
     );
   }
 
@@ -248,27 +171,14 @@ class _ToolsScreenState extends State<ToolsScreen> {
     ToolsState toolsState,
     DownloadState downloadState,
   ) async {
-    final modelState = downloadState.getModelState(model.slug);
-    final quant = modelState.downloadedQuantization;
-
-    if (quant == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No quantization available')),
-        );
-      }
-      return;
-    }
-
-    final runner = await downloadState.loadModel(model.slug, quant.slug);
+    final runner = await loadAndInitializeModel(
+      context: context,
+      model: model,
+      downloadState: downloadState,
+    );
 
     if (runner != null) {
       await toolsState.initialize(runner, model: model);
-    } else if (mounted) {
-      final error = downloadState.loadErrorMessage ?? 'Failed to load model';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -449,7 +359,8 @@ class _ToolsScreenState extends State<ToolsScreen> {
                   child: ListView.separated(
                     controller: scrollController,
                     itemCount: toolsState.registeredFunctions.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final function = toolsState.registeredFunctions[index];
                       return _FunctionCard(function: function);
@@ -655,7 +566,7 @@ class _ToolsMessageBubble extends StatelessWidget {
                   bottomRight: Radius.circular(16),
                 ),
               ),
-              child: const _TypingIndicator(),
+              child: const TypingIndicator(),
             ),
           ],
         ),
@@ -700,7 +611,7 @@ class _ToolsMessageBubble extends StatelessWidget {
                   ),
                   if (message.stats != null && !message.isStreaming) ...[
                     const SizedBox(height: 8),
-                    _StatsView(stats: message.stats!),
+                    StatsView(stats: message.stats!),
                   ],
                 ],
               ),
@@ -826,101 +737,6 @@ class _ToolsMessageBubble extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatsView extends StatelessWidget {
-  const _StatsView({required this.stats});
-
-  final GenerationStats stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <String>[];
-
-    items.add('${stats.tokenCount} tokens');
-    items.add('${stats.tokensPerSecond.toStringAsFixed(1)} tok/s');
-
-    if (stats.promptTokenCount != null) {
-      items.add('${stats.promptTokenCount} prompt');
-    }
-
-    if (stats.generationTimeMs != null) {
-      final seconds = stats.generationTimeMs! / 1000;
-      items.add('${seconds.toStringAsFixed(2)}s');
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        items.join(' · '),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).colorScheme.outline,
-        ),
-      ),
-    );
-  }
-}
-
-class _TypingIndicator extends StatefulWidget {
-  const _TypingIndicator();
-
-  @override
-  State<_TypingIndicator> createState() => _TypingIndicatorState();
-}
-
-class _TypingIndicatorState extends State<_TypingIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (index) {
-            final delay = index * 0.2;
-            final opacity = (1 - ((_controller.value - delay) % 1.0).abs() * 2)
-                .clamp(0.3, 1.0);
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Opacity(
-                opacity: opacity,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            );
-          }),
-        );
-      },
     );
   }
 }

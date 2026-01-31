@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import '../models/demo_schemas.dart';
 import '../state/chat_state.dart';
 import '../state/download_state.dart';
+import '../widgets/common_views.dart';
+import '../widgets/model_selector.dart';
 
 /// Demo screen for structured JSON output generation.
 class StructuredDemoScreen extends StatefulWidget {
@@ -181,27 +183,14 @@ Important:
     ChatState chatState,
     DownloadState downloadState,
   ) async {
-    final modelState = downloadState.getModelState(model.slug);
-    final quant = modelState.downloadedQuantization;
-
-    if (quant == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No quantization available')),
-        );
-      }
-      return;
-    }
-
-    final runner = await downloadState.loadModel(model.slug, quant.slug);
+    final runner = await loadAndInitializeModel(
+      context: context,
+      model: model,
+      downloadState: downloadState,
+    );
 
     if (runner != null) {
       await chatState.initialize(runner, model: model);
-    } else if (mounted) {
-      final error = downloadState.loadErrorMessage ?? 'Failed to load model';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -275,61 +264,11 @@ Important:
   }
 
   Widget _buildNoModelsView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.download_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No models available',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Download a model from the Models tab to start.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return const NoModelsView();
   }
 
   Widget _buildLoadingView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              'Loading model...',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Please wait while the model is loaded into memory.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return const ModelLoadingView();
   }
 
   Widget _buildModelSelector(
@@ -337,46 +276,13 @@ Important:
     ChatState chatState,
     DownloadState downloadState,
   ) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.data_object,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Select a Model',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose a model to generate structured JSON output.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: loadedModels.map((model) {
-                return FilledButton.tonal(
-                  onPressed: () =>
-                      _loadAndInitializeModel(model, chatState, downloadState),
-                  child: Text(model.name),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
+    return ModelSelectorView(
+      models: loadedModels,
+      icon: Icons.data_object,
+      title: 'Select a Model',
+      description: 'Choose a model to generate structured JSON output.',
+      onModelSelected: (model) =>
+          _loadAndInitializeModel(model, chatState, downloadState),
     );
   }
 
@@ -399,7 +305,7 @@ Important:
 
     showModalBottomSheet(
       context: context,
-      builder: (context) => _ModelSwitcherSheet(
+      builder: (context) => ModelSwitcherSheet(
         models: loadedModels,
         currentModelSlug: currentSlug,
         onModelSelected: (model) async {
@@ -415,21 +321,11 @@ Important:
     ChatState chatState,
     DownloadState downloadState,
   ) async {
-    final modelState = downloadState.getModelState(model.slug);
-    final quant = modelState.downloadedQuantization;
-
-    if (quant == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No quantization available')),
-        );
-      }
-      return;
-    }
-
-    // ModelManager automatically unloads the previous model before loading
-    // the new one, preventing memory issues on native devices
-    final runner = await downloadState.loadModel(model.slug, quant.slug);
+    final runner = await loadAndInitializeModel(
+      context: context,
+      model: model,
+      downloadState: downloadState,
+    );
 
     if (runner != null) {
       await chatState.switchModel(runner, model: model);
@@ -439,12 +335,7 @@ Important:
         ).showSnackBar(SnackBar(content: Text('Switched to ${model.name}')));
       }
     } else if (mounted) {
-      // Reset state since the load failed
       chatState.reset();
-      final error = downloadState.loadErrorMessage ?? 'Failed to load model';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -759,68 +650,6 @@ Important:
             child: Text(
               displayValue,
               style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModelSwitcherSheet extends StatelessWidget {
-  const _ModelSwitcherSheet({
-    required this.models,
-    required this.currentModelSlug,
-    required this.onModelSelected,
-  });
-
-  final List<LeapModel> models;
-  final String? currentModelSlug;
-  final void Function(LeapModel model) onModelSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-            child: Text(
-              'Switch Model',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: models.length,
-              itemBuilder: (context, index) {
-                final model = models[index];
-                final isSelected = model.slug == currentModelSlug;
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: isSelected
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Icons.smart_toy,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  title: Text(model.name),
-                  trailing: isSelected
-                      ? Icon(
-                          Icons.check_circle,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      : null,
-                  onTap: isSelected ? null : () => onModelSelected(model),
-                );
-              },
             ),
           ),
         ],
