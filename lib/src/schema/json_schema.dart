@@ -109,7 +109,8 @@ class JsonSchema {
   /// ```
   SchemaValidationResult validate(Map<String, dynamic> data) {
     final results = _validator.validate(data);
-    final errors = results.errors.map((e) => e.message).toList();
+    // Deduplicate error messages
+    final errors = results.errors.map((e) => e.message).toSet().toList();
     return SchemaValidationResult(
       isValid: results.isValid,
       errors: errors,
