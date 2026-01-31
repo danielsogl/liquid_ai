@@ -12,8 +12,8 @@ model inference on iOS and Android.
   s.source           = { :path => '.' }
   s.source_files     = 'liquid_ai/Sources/liquid_ai/**/*.swift'
   s.dependency 'Flutter'
-  # Note: For CocoaPods users, Leap-SDK must be added manually to the Podfile.
-  # We recommend using Swift Package Manager instead for easier integration.
+  s.dependency 'Leap-SDK', '~> 0.9.0'
+  s.dependency 'Leap-Model-Downloader', '~> 0.9.0'
   s.platform         = :ios, '17.0'
   s.swift_version    = '5.9'
 

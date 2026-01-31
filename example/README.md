@@ -24,5 +24,5 @@ A complete example demonstrating the `liquid_ai` package features.
 
 ## Requirements
 
-- iOS 15.0+ or Android API 31+ (Android 12)
+- iOS 17.0+ or Android API 31+ (Android 12)
 - Physical device recommended for best performance

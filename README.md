@@ -21,7 +21,7 @@ Run powerful on-device AI models in your Flutter apps with the LEAP SDK. Support
 
 | Platform | Supported | Notes |
 |----------|-----------|-------|
-| iOS      | Yes       | iOS 15.0+ required |
+| iOS      | Yes       | iOS 17.0+, SPM (default) or CocoaPods |
 | Android  | Yes       | API 31+ (Android 12) |
 | macOS    | No        | Not yet supported |
 | Web      | No        | Native inference only |
@@ -35,6 +35,34 @@ Add `liquid_ai` to your `pubspec.yaml`:
 ```yaml
 dependencies:
   liquid_ai: ^0.0.1
+```
+
+### iOS Setup
+
+**Swift Package Manager (default, recommended):**
+
+SPM is enabled by default in Flutter 3.24+. No additional setup required.
+
+**CocoaPods (alternative):**
+
+If you need to use CocoaPods, add the LEAP SDK git source to your `ios/Podfile`:
+
+```ruby
+target 'Runner' do
+  # Add LEAP SDK from git (required for v0.9.x)
+  pod 'Leap-SDK', :git => 'https://github.com/Liquid4All/leap-ios.git', :tag => 'v0.9.2'
+  pod 'Leap-Model-Downloader', :git => 'https://github.com/Liquid4All/leap-ios.git', :tag => 'v0.9.2'
+
+  # ... rest of your Podfile
+end
+```
+
+Then disable SPM in your `pubspec.yaml`:
+
+```yaml
+flutter:
+  config:
+    enable-swift-package-manager: false
 ```
 
 ### Basic Usage
