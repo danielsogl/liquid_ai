@@ -338,8 +338,12 @@ class ToolsState extends ChangeNotifier {
     );
     notifyListeners();
 
-    // Generate natural language response
-    final prompt = 'Based on the tool results, provide a helpful response.';
+    // Generate natural language response with explicit tool results context
+    // Include actual results to ensure the model has proper context
+    final prompt =
+        'Here are the tool execution results:\n${results.join("\n")}\n\n'
+        'Please provide a helpful, natural language response based on these '
+        'results. Do not call any more tools.';
     final buffer = StringBuffer();
 
     try {
