@@ -6,7 +6,7 @@ import 'json_schema_builder.dart';
 import 'schema_property.dart';
 
 /// Result of validating data against a JSON Schema.
-class SchemaValidationResult {
+final class SchemaValidationResult {
   /// Creates a [SchemaValidationResult].
   const SchemaValidationResult({required this.isValid, required this.errors});
 
@@ -34,7 +34,7 @@ class SchemaValidationResult {
 ///     .addInt('rating', 'Humor rating 1-10', minimum: 1, maximum: 10)
 ///     .build();
 /// ```
-class JsonSchema {
+final class JsonSchema {
   /// Creates a [JsonSchema] with the given properties.
   JsonSchema({
     required this.description,

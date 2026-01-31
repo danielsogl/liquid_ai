@@ -1,5 +1,5 @@
 /// Progress information for a download or load operation.
-class DownloadProgress {
+final class DownloadProgress {
   /// Creates a new [DownloadProgress].
   const DownloadProgress({
     required this.operationId,

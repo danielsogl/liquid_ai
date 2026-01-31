@@ -67,7 +67,7 @@ enum ModelQuantization {
 }
 
 /// Information about a specific quantization variant.
-class QuantizationInfo {
+final class QuantizationInfo {
   /// Creates a new [QuantizationInfo].
   const QuantizationInfo({required this.quantization, this.sizeBytes});
 
@@ -96,7 +96,7 @@ class QuantizationInfo {
 }
 
 /// Represents an available LEAP model.
-class LeapModel {
+final class LeapModel {
   /// Creates a new [LeapModel].
   const LeapModel({
     required this.slug,

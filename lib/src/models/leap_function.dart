@@ -1,7 +1,7 @@
 import '../schema/json_schema.dart';
 
 /// A function that can be called by the model.
-class LeapFunction {
+final class LeapFunction {
   /// Creates a new [LeapFunction].
   const LeapFunction({
     required this.name,
@@ -78,7 +78,7 @@ class LeapFunction {
 }
 
 /// A function call made by the model.
-class LeapFunctionCall {
+final class LeapFunctionCall {
   /// Creates a new [LeapFunctionCall].
   const LeapFunctionCall({
     required this.id,
@@ -127,7 +127,7 @@ class LeapFunctionCall {
 }
 
 /// The result of a function call to provide back to the model.
-class LeapFunctionResult {
+final class LeapFunctionResult {
   /// Creates a new [LeapFunctionResult].
   const LeapFunctionResult({
     required this.callId,

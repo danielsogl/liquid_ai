@@ -13,7 +13,7 @@ enum FunctionCallParser {
 }
 
 /// Options for text generation.
-class GenerationOptions {
+final class GenerationOptions {
   /// Creates new [GenerationOptions].
   const GenerationOptions({
     this.temperature,

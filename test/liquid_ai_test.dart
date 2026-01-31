@@ -108,6 +108,75 @@ void main() {
       });
     });
 
+    group('loadModelFromPath', () {
+      test('emits started event first', () async {
+        final events = await liquidAi
+            .loadModelFromPath('/path/to/model.gguf')
+            .toList();
+
+        expect(events.first, isA<LoadStartedEvent>());
+      });
+
+      test('emits progress events during load', () async {
+        final events = await liquidAi
+            .loadModelFromPath('/path/to/model.gguf')
+            .toList();
+
+        final progressEvents = events.whereType<LoadProgressEvent>().toList();
+        expect(progressEvents, isNotEmpty);
+      });
+
+      test('emits completed event with runner on success', () async {
+        final events = await liquidAi
+            .loadModelFromPath('/path/to/my-model.gguf')
+            .toList();
+
+        final completeEvent = events.last as LoadCompleteEvent;
+        expect(completeEvent.runner, isNotNull);
+        expect(completeEvent.runner.model, 'my-model');
+        expect(completeEvent.runner.quantization, 'local');
+      });
+
+      test('extracts model name from path without extension', () async {
+        final events = await liquidAi
+            .loadModelFromPath('/models/LFM2-1B-Q4_K_M.gguf')
+            .toList();
+
+        final completeEvent = events.last as LoadCompleteEvent;
+        expect(completeEvent.runner.model, 'LFM2-1B-Q4_K_M');
+      });
+
+      test('handles path without extension', () async {
+        final events = await liquidAi
+            .loadModelFromPath('/models/mymodel')
+            .toList();
+
+        final completeEvent = events.last as LoadCompleteEvent;
+        expect(completeEvent.runner.model, 'mymodel');
+      });
+
+      test('emits error event on failure', () async {
+        mockPlatform.simulateError = true;
+        mockPlatform.errorMessage = 'File not found';
+
+        final events = await liquidAi
+            .loadModelFromPath('/path/to/missing.gguf')
+            .toList();
+
+        final errorEvent = events.last as LoadErrorEvent;
+        expect(errorEvent.error, 'File not found');
+      });
+
+      test('accepts LoadOptions', () async {
+        const options = LoadOptions(contextSize: 2048);
+        final events = await liquidAi
+            .loadModelFromPath('/path/to/model.gguf', options: options)
+            .toList();
+
+        expect(events.last, isA<LoadCompleteEvent>());
+      });
+    });
+
     group('isModelDownloaded', () {
       test('returns false for non-downloaded model', () async {
         final isDownloaded = await liquidAi.isModelDownloaded(

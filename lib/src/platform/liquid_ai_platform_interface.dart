@@ -39,6 +39,17 @@ abstract class LiquidAiPlatform extends PlatformInterface {
     LoadOptions? options,
   });
 
+  /// Loads a model from a local file path and returns the operation ID.
+  ///
+  /// This is useful for loading models that are bundled with the app or
+  /// have been downloaded to a custom location.
+  ///
+  /// The [path] must be an absolute path to a valid model file (e.g., .gguf).
+  ///
+  /// The optional [options] parameter allows configuring inference engine
+  /// settings like context size, batch size, and GPU acceleration.
+  Future<String> loadModelFromPath(String path, {LoadOptions? options});
+
   /// Unloads a model runner.
   Future<bool> unloadModel(String runnerId);
 

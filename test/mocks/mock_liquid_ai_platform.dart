@@ -148,6 +148,72 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
     return operationId;
   }
 
+  @override
+  Future<String> loadModelFromPath(String path, {LoadOptions? options}) async {
+    final operationId = 'op_${++_operationCounter}';
+    final runnerId = 'runner_${++_runnerCounter}';
+
+    // Schedule events to be emitted after the method returns
+    unawaited(_emitLoadEventsFromPath(operationId, runnerId, path));
+
+    return operationId;
+  }
+
+  Future<void> _emitLoadEventsFromPath(
+    String operationId,
+    String runnerId,
+    String path,
+  ) async {
+    await Future.delayed(Duration.zero);
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    _safeAdd({
+      'operationId': operationId,
+      'type': 'load',
+      'status': 'started',
+      'progress': 0.0,
+    });
+
+    await Future.delayed(const Duration(milliseconds: 1));
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    if (simulateError) {
+      _safeAdd({
+        'operationId': operationId,
+        'type': 'load',
+        'status': 'error',
+        'error': errorMessage,
+      });
+      return;
+    }
+
+    // Simulate progress (faster than download since file is local)
+    for (var i = 1; i <= 5; i++) {
+      if (_cancelledOperations.contains(operationId)) return;
+      _safeAdd({
+        'operationId': operationId,
+        'type': 'load',
+        'status': 'progress',
+        'progress': i / 5,
+      });
+      await Future.delayed(const Duration(milliseconds: 1));
+    }
+
+    if (_cancelledOperations.contains(operationId)) return;
+
+    runners[runnerId] = true;
+
+    _safeAdd({
+      'operationId': operationId,
+      'type': 'load',
+      'status': 'completed',
+      'progress': 1.0,
+      'runnerId': runnerId,
+    });
+  }
+
   Future<void> _emitLoadEvents(
     String operationId,
     String runnerId,

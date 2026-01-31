@@ -50,6 +50,15 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
   }
 
   @override
+  Future<String> loadModelFromPath(String path, {LoadOptions? options}) async {
+    final operationId = await methodChannel.invokeMethod<String>(
+      'loadModelFromPath',
+      {'path': path, if (options != null) 'options': options.toMap()},
+    );
+    return operationId!;
+  }
+
+  @override
   Future<bool> unloadModel(String runnerId) async {
     final success = await methodChannel.invokeMethod<bool>('unloadModel', {
       'runnerId': runnerId,

@@ -186,6 +186,97 @@ class LiquidAi {
     return controller.stream;
   }
 
+  /// Loads a model from a local file path.
+  ///
+  /// This is useful for loading models that are bundled with the app or
+  /// have been downloaded to a custom location.
+  ///
+  /// The [path] must be an absolute path to a valid model file (e.g., .gguf).
+  ///
+  /// The optional [options] parameter allows configuring inference engine
+  /// settings like context size, batch size, and GPU acceleration.
+  ///
+  /// Returns a stream of [LoadEvent] objects indicating progress.
+  /// The stream will emit:
+  /// - [LoadStartedEvent] when operation begins
+  /// - [LoadProgressEvent] during load with progress updates
+  /// - [LoadCompleteEvent] when model is loaded, containing a [ModelRunner]
+  /// - [LoadErrorEvent] if an error occurs
+  /// - [LoadCancelledEvent] if the operation is cancelled
+  ///
+  /// Example:
+  /// ```dart
+  /// // Load from app bundle (iOS)
+  /// final bundlePath = '${Directory.current.path}/models/model.gguf';
+  ///
+  /// // Load from assets (after copying to documents directory)
+  /// final docDir = await getApplicationDocumentsDirectory();
+  /// final modelPath = '${docDir.path}/models/my-model.gguf';
+  ///
+  /// await for (final event in liquidAi.loadModelFromPath(modelPath)) {
+  ///   switch (event) {
+  ///     case LoadCompleteEvent(:final runner):
+  ///       print('Model loaded!');
+  ///     case LoadErrorEvent(:final error):
+  ///       print('Error: $error');
+  ///     default:
+  ///       break;
+  ///   }
+  /// }
+  /// ```
+  Stream<LoadEvent> loadModelFromPath(String path, {LoadOptions? options}) {
+    late StreamController<LoadEvent> controller;
+    StreamSubscription<Map<String, dynamic>>? subscription;
+    String? operationId;
+    var isClosed = false;
+
+    void safeAdd(LoadEvent event) {
+      if (!isClosed) {
+        controller.add(event);
+      }
+    }
+
+    void safeClose() {
+      if (!isClosed) {
+        isClosed = true;
+        controller.close();
+      }
+    }
+
+    controller = StreamController<LoadEvent>(
+      onListen: () async {
+        subscription = _platform.progressEvents.listen((event) {
+          if (operationId != null && event['operationId'] == operationId) {
+            final eventData = _parseLoadEventFromPath(
+              event,
+              operationId!,
+              path,
+            );
+            if (eventData != null) {
+              safeAdd(eventData);
+              if (eventData is LoadCompleteEvent ||
+                  eventData is LoadErrorEvent ||
+                  eventData is LoadCancelledEvent) {
+                safeClose();
+              }
+            }
+          }
+        });
+
+        operationId = await _platform.loadModelFromPath(path, options: options);
+      },
+      onCancel: () {
+        isClosed = true;
+        subscription?.cancel();
+        if (operationId != null) {
+          _platform.cancelOperation(operationId!);
+        }
+      },
+    );
+
+    return controller.stream;
+  }
+
   /// Checks if a model is already downloaded locally.
   Future<bool> isModelDownloaded(String model, String quantization) {
     return _platform.isModelDownloaded(model, quantization);
@@ -270,6 +361,57 @@ class LiquidAi {
             runnerId: runnerId,
             model: model,
             quantization: quantization,
+          ),
+        );
+      case 'error':
+        return LoadErrorEvent(
+          operationId: operationId,
+          error: event['error'] as String? ?? 'Unknown error',
+        );
+      case 'cancelled':
+        return LoadCancelledEvent(operationId: operationId);
+      default:
+        return null;
+    }
+  }
+
+  LoadEvent? _parseLoadEventFromPath(
+    Map<String, dynamic> event,
+    String operationId,
+    String path,
+  ) {
+    final status = event['status'] as String?;
+    switch (status) {
+      case 'started':
+        return LoadStartedEvent(operationId: operationId);
+      case 'progress':
+        return LoadProgressEvent(
+          operationId: operationId,
+          progress: DownloadProgress(
+            operationId: operationId,
+            progress: (event['progress'] as num).toDouble(),
+            speed: event['speed'] as int?,
+          ),
+        );
+      case 'completed':
+        final runnerId = event['runnerId'] as String?;
+        if (runnerId == null) {
+          return LoadErrorEvent(
+            operationId: operationId,
+            error: 'No runner ID returned',
+          );
+        }
+        // Extract model name from path (filename without extension)
+        final fileName = path.split('/').last;
+        final modelName = fileName.contains('.')
+            ? fileName.substring(0, fileName.lastIndexOf('.'))
+            : fileName;
+        return LoadCompleteEvent(
+          operationId: operationId,
+          runner: ModelRunner(
+            runnerId: runnerId,
+            model: modelName,
+            quantization: 'local',
           ),
         );
       case 'error':

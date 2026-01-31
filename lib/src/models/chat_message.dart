@@ -144,7 +144,7 @@ class AudioContent extends ChatMessageContent {
 }
 
 /// A message in a chat conversation.
-class ChatMessage {
+final class ChatMessage {
   /// Creates a new [ChatMessage].
   const ChatMessage({required this.role, required this.content});
 

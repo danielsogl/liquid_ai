@@ -17,7 +17,7 @@ enum GenerationFinishReason {
 }
 
 /// Statistics about a completed generation.
-class GenerationStats {
+final class GenerationStats {
   /// Creates new [GenerationStats].
   const GenerationStats({
     required this.tokenCount,

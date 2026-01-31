@@ -11,7 +11,7 @@ enum ModelStatusType {
 }
 
 /// Status information for a model.
-class ModelStatus {
+final class ModelStatus {
   /// Creates a new [ModelStatus].
   const ModelStatus({required this.type, this.progress = 0.0});
 
