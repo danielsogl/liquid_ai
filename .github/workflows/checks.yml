@@ -120,7 +120,7 @@ jobs:
             -workspace Runner.xcworkspace \
             -scheme Runner \
             -only-testing:RunnerTests \
-            -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.0' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             | xcpretty --color && exit ${PIPESTATUS[0]}
