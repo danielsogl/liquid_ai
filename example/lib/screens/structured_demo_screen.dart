@@ -81,7 +81,7 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
       );
 
       final options = const GenerationOptions(
-        temperature: 0.5,
+        temperature: 0.3,
         maxTokens: 1024,
       ).withSchema(_currentDemo.schema);
 
@@ -114,9 +114,20 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
 
       await conversation.dispose();
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
+      final errorStr = e.toString();
+      // Check if this is likely a hot reload issue (invalid runner)
+      if (errorStr.contains('Invalid') ||
+          errorStr.contains('disposed') ||
+          errorStr.contains('null')) {
+        chatState.reset();
+        setState(() {
+          _errorMessage = 'Model connection lost. Please select a model again.';
+        });
+      } else {
+        setState(() {
+          _errorMessage = errorStr;
+        });
+      }
     } finally {
       setState(() {
         _isGenerating = false;
@@ -125,8 +136,20 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
   }
 
   String _formatJson(String json) {
+    // Strip markdown code blocks if present
+    var cleaned = json.trim();
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.substring(7);
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.substring(3);
+    }
+    if (cleaned.endsWith('```')) {
+      cleaned = cleaned.substring(0, cleaned.length - 3);
+    }
+    cleaned = cleaned.trim();
+
     try {
-      final parsed = jsonDecode(json);
+      final parsed = jsonDecode(cleaned);
       return const JsonEncoder.withIndent('  ').convert(parsed);
     } catch (_) {
       return json;
@@ -205,6 +228,11 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
             return _buildNoModelsView();
           }
 
+          // Show loading state while model is being loaded
+          if (downloadState.isLoading) {
+            return _buildLoadingView();
+          }
+
           if (!chatState.isReady) {
             return _buildModelSelector(loadedModels, chatState, downloadState);
           }
@@ -266,70 +294,75 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
     );
   }
 
-  Widget _buildModelSelector(
-    List<LeapModel> loadedModels,
-    ChatState chatState,
-    DownloadState downloadState,
-  ) {
-    final isLoading = downloadState.isLoading;
-
+  Widget _buildLoadingView() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isLoading) ...[
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Loading model...',
-                style: Theme.of(context).textTheme.titleLarge,
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Loading model...',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please wait while the model is loaded into memory.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Please wait while the model is loaded into memory.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModelSelector(
+    List<LeapModel> loadedModels,
+    ChatState chatState,
+    DownloadState downloadState,
+  ) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.data_object,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Select a Model',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose a model to generate structured JSON output.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-            ] else ...[
-              Icon(
-                Icons.data_object,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Select a Model',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose a model to generate structured JSON output.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: loadedModels.map((model) {
-                  return FilledButton.tonal(
-                    onPressed: () => _loadAndInitializeModel(
-                      model,
-                      chatState,
-                      downloadState,
-                    ),
-                    child: Text(model.name),
-                  );
-                }).toList(),
-              ),
-            ],
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: loadedModels.map((model) {
+                return FilledButton.tonal(
+                  onPressed: () =>
+                      _loadAndInitializeModel(model, chatState, downloadState),
+                  child: Text(model.name),
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),

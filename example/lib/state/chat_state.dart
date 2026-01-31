@@ -214,44 +214,63 @@ class ChatState extends ChangeNotifier {
     );
     final buffer = StringBuffer();
 
-    _generationSubscription = _conversation!
-        .generateResponse(message, options: _options)
-        .listen(
-          (event) {
-            switch (event) {
-              case GenerationChunkEvent():
-                buffer.write(event.chunk);
-                _updateLastMessage(buffer.toString(), isStreaming: true);
-              case GenerationCompleteEvent():
-                _updateLastMessage(
-                  event.message.text ?? buffer.toString(),
-                  isStreaming: false,
-                  stats: event.stats,
-                );
-                _isGenerating = false;
-                _generationSubscription = null;
-                notifyListeners();
-              case GenerationErrorEvent():
-                _updateLastMessage('Error: ${event.error}', isStreaming: false);
-                _isGenerating = false;
-                _generationSubscription = null;
-                notifyListeners();
-              case GenerationCancelledEvent():
-                _updateLastMessage(buffer.toString(), isStreaming: false);
-                _isGenerating = false;
-                _generationSubscription = null;
-                notifyListeners();
-              default:
-                break;
-            }
-          },
-          onError: (error) {
-            _updateLastMessage('Error: $error', isStreaming: false);
-            _isGenerating = false;
-            _generationSubscription = null;
-            notifyListeners();
-          },
-        );
+    try {
+      _generationSubscription = _conversation!
+          .generateResponse(message, options: _options)
+          .listen(
+            (event) {
+              switch (event) {
+                case GenerationChunkEvent():
+                  buffer.write(event.chunk);
+                  _updateLastMessage(buffer.toString(), isStreaming: true);
+                case GenerationCompleteEvent():
+                  _updateLastMessage(
+                    event.message.text ?? buffer.toString(),
+                    isStreaming: false,
+                    stats: event.stats,
+                  );
+                  _isGenerating = false;
+                  _generationSubscription = null;
+                  notifyListeners();
+                case GenerationErrorEvent():
+                  _updateLastMessage(
+                    'Error: ${event.error}',
+                    isStreaming: false,
+                  );
+                  _isGenerating = false;
+                  _generationSubscription = null;
+                  notifyListeners();
+                case GenerationCancelledEvent():
+                  _updateLastMessage(buffer.toString(), isStreaming: false);
+                  _isGenerating = false;
+                  _generationSubscription = null;
+                  notifyListeners();
+                default:
+                  break;
+              }
+            },
+            onError: (error) {
+              _handleGenerationError(error);
+            },
+          );
+    } catch (e) {
+      _handleGenerationError(e);
+    }
+  }
+
+  void _handleGenerationError(dynamic error) {
+    final errorStr = error.toString();
+    // Check if this is likely a hot reload issue (invalid runner)
+    if (errorStr.contains('Invalid') ||
+        errorStr.contains('disposed') ||
+        errorStr.contains('null')) {
+      reset();
+    } else {
+      _updateLastMessage('Error: $errorStr', isStreaming: false);
+      _isGenerating = false;
+      _generationSubscription = null;
+      notifyListeners();
+    }
   }
 
   /// Stops the current generation.
@@ -304,6 +323,20 @@ class ChatState extends ChangeNotifier {
   /// Exports the conversation as JSON.
   Future<String?> exportConversation() async {
     return _conversation?.export();
+  }
+
+  /// Resets the chat state, clearing the runner and conversation.
+  ///
+  /// This is useful after a hot reload when the native runner becomes invalid.
+  void reset() {
+    _generationSubscription?.cancel();
+    _generationSubscription = null;
+    _runner = null;
+    _conversation = null;
+    _selectedModel = null;
+    _isGenerating = false;
+    _messages.clear();
+    notifyListeners();
   }
 
   void _updateLastMessage(
