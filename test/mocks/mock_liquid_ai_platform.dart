@@ -133,7 +133,11 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   }
 
   @override
-  Future<String> loadModel(String model, String quantization) async {
+  Future<String> loadModel(
+    String model,
+    String quantization, {
+    LoadOptions? options,
+  }) async {
     final operationId = 'op_${++_operationCounter}';
     final runnerId = 'runner_${++_runnerCounter}';
     final key = '$model:$quantization';

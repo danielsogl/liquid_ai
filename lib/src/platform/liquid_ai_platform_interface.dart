@@ -1,5 +1,6 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+import '../models/load_options.dart';
 import '../models/model_status.dart';
 import 'method_channel_liquid_ai.dart';
 
@@ -29,7 +30,14 @@ abstract class LiquidAiPlatform extends PlatformInterface {
   Future<String> downloadModel(String model, String quantization);
 
   /// Loads a model and returns the operation ID.
-  Future<String> loadModel(String model, String quantization);
+  ///
+  /// The optional [options] parameter allows configuring inference engine
+  /// settings like context size, batch size, and GPU acceleration.
+  Future<String> loadModel(
+    String model,
+    String quantization, {
+    LoadOptions? options,
+  });
 
   /// Unloads a model runner.
   Future<bool> unloadModel(String runnerId);

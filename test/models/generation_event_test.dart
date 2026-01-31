@@ -207,6 +207,36 @@ void main() {
     });
   });
 
+  group('GenerationToolResultEvent', () {
+    test('creates from map', () {
+      final event = GenerationEvent.fromMap({
+        'generationId': 'gen_1',
+        'type': 'toolResult',
+        'functionName': 'getWeather',
+        'arguments': {'city': 'Tokyo'},
+        'result': '{"temperature": 25}',
+      });
+      expect(event, isA<GenerationToolResultEvent>());
+      final toolEvent = event as GenerationToolResultEvent;
+      expect(toolEvent.generationId, 'gen_1');
+      expect(toolEvent.functionName, 'getWeather');
+      expect(toolEvent.arguments, {'city': 'Tokyo'});
+      expect(toolEvent.result, '{"temperature": 25}');
+    });
+
+    test('toString contains relevant info', () {
+      const event = GenerationToolResultEvent(
+        generationId: 'gen_1',
+        functionName: 'getWeather',
+        arguments: {'city': 'Tokyo'},
+        result: '{"temperature": 25}',
+      );
+      final str = event.toString();
+      expect(str, contains('GenerationToolResultEvent'));
+      expect(str, contains('getWeather'));
+    });
+  });
+
   group('GenerationEvent.fromMap', () {
     test('throws on unknown type', () {
       expect(

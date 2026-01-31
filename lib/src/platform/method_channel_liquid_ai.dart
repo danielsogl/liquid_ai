@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 
+import '../models/load_options.dart';
 import '../models/model_status.dart';
 import 'liquid_ai_platform_interface.dart';
 
@@ -35,10 +36,15 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
   }
 
   @override
-  Future<String> loadModel(String model, String quantization) async {
+  Future<String> loadModel(
+    String model,
+    String quantization, {
+    LoadOptions? options,
+  }) async {
     final operationId = await methodChannel.invokeMethod<String>('loadModel', {
       'model': model,
       'quantization': quantization,
+      if (options != null) 'options': options.toMap(),
     });
     return operationId!;
   }

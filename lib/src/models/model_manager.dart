@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../liquid_ai.dart';
 import 'load_event.dart';
+import 'load_options.dart';
 import 'model_runner.dart';
 
 /// Manages model lifecycle ensuring only one model is loaded at a time.
@@ -78,6 +79,9 @@ class ModelManager {
   /// disposing of the current model before loading the new one. This prevents
   /// memory errors on devices with limited resources.
   ///
+  /// The optional [options] parameter allows configuring inference engine
+  /// settings like context size, batch size, and GPU acceleration.
+  ///
   /// Returns a stream of [LoadEvent] objects indicating progress:
   /// - [LoadStartedEvent] when the operation begins
   /// - [LoadProgressEvent] during download/load with progress updates
@@ -89,7 +93,11 @@ class ModelManager {
   /// unloaded at this point). Handle [LoadErrorEvent] appropriately.
   ///
   /// Throws [StateError] if a load operation is already in progress.
-  Stream<LoadEvent> loadModel(String model, String quantization) {
+  Stream<LoadEvent> loadModel(
+    String model,
+    String quantization, {
+    LoadOptions? options,
+  }) {
     if (_isLoading) {
       throw StateError(
         'A model load operation is already in progress. '
@@ -124,7 +132,7 @@ class ModelManager {
 
         // Now load the new model
         subscription = _liquidAi
-            .loadModel(model, quantization)
+            .loadModel(model, quantization, options: options)
             .listen(
               (event) {
                 safeAdd(event);
@@ -164,17 +172,24 @@ class ModelManager {
   /// This is a convenience method that wraps [loadModel] and returns the
   /// final [ModelRunner] or null if loading failed.
   ///
+  /// The optional [options] parameter allows configuring inference engine
+  /// settings like context size, batch size, and GPU acceleration.
+  ///
   /// Returns null if:
   /// - The load operation was cancelled
   /// - An error occurred during loading
   ///
   /// If you need progress updates or detailed error information, use
   /// [loadModel] instead.
-  Future<ModelRunner?> loadModelAsync(String model, String quantization) async {
+  Future<ModelRunner?> loadModelAsync(
+    String model,
+    String quantization, {
+    LoadOptions? options,
+  }) async {
     final completer = Completer<ModelRunner?>();
     StreamSubscription<LoadEvent>? subscription;
 
-    subscription = loadModel(model, quantization).listen(
+    subscription = loadModel(model, quantization, options: options).listen(
       (event) {
         if (event is LoadCompleteEvent) {
           if (!completer.isCompleted) {

@@ -68,6 +68,13 @@ sealed class GenerationEvent {
         );
       case 'cancelled':
         return GenerationCancelledEvent(generationId: generationId);
+      case 'toolResult':
+        return GenerationToolResultEvent(
+          generationId: generationId,
+          functionName: map['functionName'] as String,
+          arguments: Map<String, dynamic>.from(map['arguments'] as Map),
+          result: map['result'] as String,
+        );
       default:
         throw ArgumentError('Unknown generation event type: $type');
     }

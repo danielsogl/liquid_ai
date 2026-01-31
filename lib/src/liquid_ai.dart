@@ -3,6 +3,7 @@ import 'dart:async';
 import 'models/download_event.dart';
 import 'models/download_progress.dart';
 import 'models/load_event.dart';
+import 'models/load_options.dart';
 import 'models/model_runner.dart';
 import 'models/model_status.dart';
 import 'platform/liquid_ai_platform_interface.dart';
@@ -88,6 +89,9 @@ class LiquidAi {
 
   /// Downloads (if needed) and loads a model.
   ///
+  /// The optional [options] parameter allows configuring inference engine
+  /// settings like context size, batch size, and GPU acceleration.
+  ///
   /// Returns a stream of [LoadEvent] objects indicating progress.
   /// The stream will emit:
   /// - [LoadStartedEvent] when operation begins
@@ -95,7 +99,32 @@ class LiquidAi {
   /// - [LoadCompleteEvent] when model is loaded, containing a [ModelRunner]
   /// - [LoadErrorEvent] if an error occurs
   /// - [LoadCancelledEvent] if the operation is cancelled
-  Stream<LoadEvent> loadModel(String model, String quantization) {
+  ///
+  /// Example:
+  /// ```dart
+  /// final options = LoadOptions(contextSize: 2048);
+  /// await for (final event in liquidAi.loadModel(
+  ///   'lfm2-1b',
+  ///   'Q4_K_M',
+  ///   options: options,
+  /// )) {
+  ///   switch (event) {
+  ///     case LoadCompleteEvent(:final runner):
+  ///       print('Model loaded: ${runner.model}');
+  ///     case LoadProgressEvent(:final progress):
+  ///       print('Progress: ${progress.progressPercent}%');
+  ///     case LoadErrorEvent(:final error):
+  ///       print('Error: $error');
+  ///     default:
+  ///       break;
+  ///   }
+  /// }
+  /// ```
+  Stream<LoadEvent> loadModel(
+    String model,
+    String quantization, {
+    LoadOptions? options,
+  }) {
     late StreamController<LoadEvent> controller;
     StreamSubscription<Map<String, dynamic>>? subscription;
     String? operationId;
@@ -139,7 +168,11 @@ class LiquidAi {
         });
 
         // Now start the load
-        operationId = await _platform.loadModel(model, quantization);
+        operationId = await _platform.loadModel(
+          model,
+          quantization,
+          options: options,
+        );
       },
       onCancel: () {
         isClosed = true;
