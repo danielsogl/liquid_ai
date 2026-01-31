@@ -101,10 +101,7 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
   }) async {
     final conversationId = await methodChannel.invokeMethod<String>(
       'createConversation',
-      {
-        'runnerId': runnerId,
-        if (systemPrompt != null) 'systemPrompt': systemPrompt,
-      },
+      {'runnerId': runnerId, 'systemPrompt': ?systemPrompt},
     );
     return conversationId!;
   }
@@ -163,7 +160,7 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
         .invokeMethod<String>('generateResponse', {
           'conversationId': conversationId,
           'message': message,
-          if (options != null) 'options': options,
+          'options': ?options,
         });
     return generationId!;
   }
