@@ -12,12 +12,32 @@ class ChatMessageUI {
   });
 
   final ChatMessageRole role;
-  final String content;
+  final List<ChatMessageContent> content;
   final bool isStreaming;
+
+  /// Returns the text content of this message, if any.
+  String? get text {
+    for (final c in content) {
+      if (c is TextContent) {
+        return c.text;
+      }
+    }
+    return null;
+  }
+
+  /// Returns all image content in this message.
+  List<ImageContent> get images {
+    return content.whereType<ImageContent>().toList();
+  }
+
+  /// Returns all audio content in this message.
+  List<AudioContent> get audio {
+    return content.whereType<AudioContent>().toList();
+  }
 
   ChatMessageUI copyWith({
     ChatMessageRole? role,
-    String? content,
+    List<ChatMessageContent>? content,
     bool? isStreaming,
   }) {
     return ChatMessageUI(
@@ -37,6 +57,9 @@ class ChatState extends ChangeNotifier {
 
   /// The current conversation.
   Conversation? _conversation;
+
+  /// The currently selected model.
+  LeapModel? _selectedModel;
 
   /// The messages in the current conversation.
   final List<ChatMessageUI> _messages = [];
@@ -69,10 +92,27 @@ class ChatState extends ChangeNotifier {
   /// Gets the current runner.
   ModelRunner? get runner => _runner;
 
+  /// Gets the currently selected model.
+  LeapModel? get selectedModel => _selectedModel;
+
+  /// Whether the current model supports image input.
+  bool get supportsImage => _selectedModel?.supportsImage ?? false;
+
+  /// Whether the current model supports audio input.
+  bool get supportsAudio => _selectedModel?.supportsAudio ?? false;
+
   /// Initializes the chat with a model runner.
-  Future<void> initialize(ModelRunner runner, {String? systemPrompt}) async {
+  Future<void> initialize(
+    ModelRunner runner, {
+    LeapModel? model,
+    String? systemPrompt,
+    bool preserveMessages = false,
+  }) async {
     _runner = runner;
-    _messages.clear();
+    _selectedModel = model;
+    if (!preserveMessages) {
+      _messages.clear();
+    }
 
     _conversation = await runner.createConversation(
       systemPrompt:
@@ -83,18 +123,67 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sends a message and streams the response.
+  /// Switches to a different model while preserving the UI message history.
+  ///
+  /// Note: The new model won't have the previous conversation context,
+  /// but the UI will still show the message history.
+  Future<void> switchModel(
+    ModelRunner runner, {
+    LeapModel? model,
+    String? systemPrompt,
+  }) async {
+    // Stop any ongoing generation
+    if (_isGenerating) {
+      await stopGeneration();
+    }
+
+    // Dispose old conversation but keep messages
+    await _conversation?.dispose();
+
+    await initialize(
+      runner,
+      model: model,
+      systemPrompt: systemPrompt,
+      preserveMessages: true,
+    );
+  }
+
+  /// Sends a text-only message and streams the response.
   Future<void> sendMessage(String text) async {
+    await sendMessageWithMedia(text: text);
+  }
+
+  /// Sends a message with optional media and streams the response.
+  Future<void> sendMessageWithMedia({
+    String? text,
+    Uint8List? image,
+    Uint8List? audio,
+  }) async {
     if (!isReady || _isGenerating) return;
+    if (text == null && image == null && audio == null) return;
+
+    // Build content list
+    final contentList = <ChatMessageContent>[];
+    if (image != null) {
+      contentList.add(ImageContent(data: image));
+    }
+    if (audio != null) {
+      contentList.add(AudioContent(data: audio));
+    }
+    if (text != null && text.isNotEmpty) {
+      contentList.add(TextContent(text: text));
+    }
 
     // Add user message
-    _messages.add(ChatMessageUI(role: ChatMessageRole.user, content: text));
+    _messages.add(
+      ChatMessageUI(role: ChatMessageRole.user, content: contentList),
+    );
 
     // Add placeholder for assistant response
     _messages.add(
       ChatMessageUI(
         role: ChatMessageRole.assistant,
-        content: '',
+        content: const [],
         isStreaming: true,
       ),
     );
@@ -102,7 +191,10 @@ class ChatState extends ChangeNotifier {
     _isGenerating = true;
     notifyListeners();
 
-    final message = ChatMessage.user(text);
+    final message = ChatMessage(
+      role: ChatMessageRole.user,
+      content: contentList,
+    );
     final buffer = StringBuffer();
 
     _generationSubscription = _conversation!
@@ -150,7 +242,7 @@ class ChatState extends ChangeNotifier {
     _generationSubscription?.cancel();
     _generationSubscription = null;
     _isGenerating = false;
-    _updateLastMessage(_messages.last.content, isStreaming: false);
+    _updateLastMessage(_messages.last.text ?? '', isStreaming: false);
     notifyListeners();
   }
 
@@ -179,12 +271,15 @@ class ChatState extends ChangeNotifier {
     return _conversation?.export();
   }
 
-  void _updateLastMessage(String content, {required bool isStreaming}) {
+  void _updateLastMessage(String textContent, {required bool isStreaming}) {
     if (_messages.isEmpty) return;
 
     final lastIndex = _messages.length - 1;
+    final newContent = textContent.isEmpty
+        ? <ChatMessageContent>[]
+        : <ChatMessageContent>[TextContent(text: textContent)];
     _messages[lastIndex] = _messages[lastIndex].copyWith(
-      content: content,
+      content: newContent,
       isStreaming: isStreaming,
     );
     notifyListeners();

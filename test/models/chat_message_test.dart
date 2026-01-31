@@ -58,82 +58,92 @@ void main() {
   });
 
   group('ImageContent', () {
-    test('creates with data and mimeType', () {
-      final content = ImageContent(
-        data: Uint8List.fromList([1, 2, 3]),
-        mimeType: 'image/png',
-      );
+    test('creates with data', () {
+      final content = ImageContent(data: Uint8List.fromList([1, 2, 3]));
       expect(content.data, hasLength(3));
-      expect(content.mimeType, 'image/png');
     });
 
     test('converts to map', () {
-      final content = ImageContent(
-        data: Uint8List.fromList([1, 2, 3]),
-        mimeType: 'image/png',
-      );
+      final content = ImageContent(data: Uint8List.fromList([1, 2, 3]));
       final map = content.toMap();
       expect(map['type'], 'image');
       expect(map['data'], [1, 2, 3]);
-      expect(map['mimeType'], 'image/png');
+      expect(map.containsKey('mimeType'), isFalse);
     });
 
     test('creates from map', () {
       final content = ChatMessageContent.fromMap({
         'type': 'image',
         'data': [1, 2, 3],
-        'mimeType': 'image/png',
       });
       expect(content, isA<ImageContent>());
-      expect((content as ImageContent).mimeType, 'image/png');
+      expect((content as ImageContent).data, hasLength(3));
+    });
+
+    test('equality', () {
+      final content1 = ImageContent(data: Uint8List.fromList([1, 2, 3]));
+      final content2 = ImageContent(data: Uint8List.fromList([1, 2, 3]));
+      final content3 = ImageContent(data: Uint8List.fromList([4, 5, 6]));
+
+      expect(content1, equals(content2));
+      expect(content1, isNot(equals(content3)));
+    });
+
+    test('hashCode', () {
+      final content1 = ImageContent(data: Uint8List.fromList([1, 2, 3]));
+      final content2 = ImageContent(data: Uint8List.fromList([1, 2, 3]));
+
+      expect(content1.hashCode, equals(content2.hashCode));
     });
 
     test('toString', () {
-      final content = ImageContent(
-        data: Uint8List.fromList([1, 2, 3]),
-        mimeType: 'image/png',
-      );
-      expect(content.toString(), 'ImageContent(mimeType: image/png, size: 3)');
+      final content = ImageContent(data: Uint8List.fromList([1, 2, 3]));
+      expect(content.toString(), 'ImageContent(size: 3 bytes)');
     });
   });
 
   group('AudioContent', () {
-    test('creates with data and sampleRate', () {
-      final content = AudioContent(
-        data: Float32List.fromList([0.1, 0.2, 0.3]),
-        sampleRate: 44100,
-      );
+    test('creates with data', () {
+      final content = AudioContent(data: Uint8List.fromList([1, 2, 3]));
       expect(content.data, hasLength(3));
-      expect(content.sampleRate, 44100);
     });
 
     test('converts to map', () {
-      final content = AudioContent(
-        data: Float32List.fromList([0.1, 0.2, 0.3]),
-        sampleRate: 44100,
-      );
+      final content = AudioContent(data: Uint8List.fromList([1, 2, 3]));
       final map = content.toMap();
       expect(map['type'], 'audio');
-      expect((map['data'] as List).length, 3);
-      expect(map['sampleRate'], 44100);
+      expect(map['data'], [1, 2, 3]);
+      expect(map.containsKey('sampleRate'), isFalse);
     });
 
     test('creates from map', () {
       final content = ChatMessageContent.fromMap({
         'type': 'audio',
-        'data': [0.1, 0.2, 0.3],
-        'sampleRate': 44100,
+        'data': [1, 2, 3],
       });
       expect(content, isA<AudioContent>());
-      expect((content as AudioContent).sampleRate, 44100);
+      expect((content as AudioContent).data, hasLength(3));
+    });
+
+    test('equality', () {
+      final content1 = AudioContent(data: Uint8List.fromList([1, 2, 3]));
+      final content2 = AudioContent(data: Uint8List.fromList([1, 2, 3]));
+      final content3 = AudioContent(data: Uint8List.fromList([4, 5, 6]));
+
+      expect(content1, equals(content2));
+      expect(content1, isNot(equals(content3)));
+    });
+
+    test('hashCode', () {
+      final content1 = AudioContent(data: Uint8List.fromList([1, 2, 3]));
+      final content2 = AudioContent(data: Uint8List.fromList([1, 2, 3]));
+
+      expect(content1.hashCode, equals(content2.hashCode));
     });
 
     test('toString', () {
-      final content = AudioContent(
-        data: Float32List.fromList([0.1, 0.2, 0.3]),
-        sampleRate: 44100,
-      );
-      expect(content.toString(), 'AudioContent(sampleRate: 44100, samples: 3)');
+      final content = AudioContent(data: Uint8List.fromList([1, 2, 3]));
+      expect(content.toString(), 'AudioContent(size: 3 bytes)');
     });
   });
 
@@ -178,7 +188,7 @@ void main() {
       final message = ChatMessage(
         role: ChatMessageRole.user,
         content: [
-          ImageContent(data: Uint8List.fromList([1]), mimeType: 'image/png'),
+          ImageContent(data: Uint8List.fromList([1])),
           const TextContent(text: 'Check this image'),
         ],
       );
@@ -189,7 +199,7 @@ void main() {
       final message = ChatMessage(
         role: ChatMessageRole.user,
         content: [
-          ImageContent(data: Uint8List.fromList([1]), mimeType: 'image/png'),
+          ImageContent(data: Uint8List.fromList([1])),
         ],
       );
       expect(message.text, isNull);

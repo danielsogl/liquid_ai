@@ -66,87 +66,75 @@ class TextContent extends ChatMessageContent {
 }
 
 /// Image content in a chat message.
+///
+/// The image data must be JPEG-encoded bytes.
 class ImageContent extends ChatMessageContent {
   /// Creates a new [ImageContent].
-  const ImageContent({required this.data, required this.mimeType});
+  ///
+  /// The [data] must contain JPEG-encoded image bytes.
+  const ImageContent({required this.data});
 
   /// Creates an [ImageContent] from a JSON map.
   factory ImageContent.fromMap(Map<String, dynamic> map) {
     return ImageContent(
       data: Uint8List.fromList(List<int>.from(map['data'] as List)),
-      mimeType: map['mimeType'] as String,
     );
   }
 
-  /// The image data.
+  /// The JPEG image data.
   final Uint8List data;
 
-  /// The MIME type of the image (e.g., 'image/png').
-  final String mimeType;
-
   @override
-  Map<String, dynamic> toMap() => {
-    'type': 'image',
-    'data': data.toList(),
-    'mimeType': mimeType,
-  };
+  Map<String, dynamic> toMap() => {'type': 'image', 'data': data.toList()};
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ImageContent &&
           runtimeType == other.runtimeType &&
-          mimeType == other.mimeType;
+          _bytesEqual(data, other.data);
 
   @override
-  int get hashCode => Object.hash(data, mimeType);
+  int get hashCode => Object.hashAll(data);
 
   @override
-  String toString() =>
-      'ImageContent(mimeType: $mimeType, size: ${data.length})';
+  String toString() => 'ImageContent(size: ${data.length} bytes)';
 }
 
 /// Audio content in a chat message.
+///
+/// The audio data must be WAV-encoded bytes.
 class AudioContent extends ChatMessageContent {
   /// Creates a new [AudioContent].
-  const AudioContent({required this.data, required this.sampleRate});
+  ///
+  /// The [data] must contain WAV-encoded audio bytes.
+  const AudioContent({required this.data});
 
   /// Creates an [AudioContent] from a JSON map.
   factory AudioContent.fromMap(Map<String, dynamic> map) {
     return AudioContent(
-      data: Float32List.fromList(
-        (map['data'] as List).map((e) => (e as num).toDouble()).toList(),
-      ),
-      sampleRate: map['sampleRate'] as int,
+      data: Uint8List.fromList(List<int>.from(map['data'] as List)),
     );
   }
 
-  /// The audio samples.
-  final Float32List data;
-
-  /// The sample rate in Hz.
-  final int sampleRate;
+  /// The WAV audio data.
+  final Uint8List data;
 
   @override
-  Map<String, dynamic> toMap() => {
-    'type': 'audio',
-    'data': data.toList(),
-    'sampleRate': sampleRate,
-  };
+  Map<String, dynamic> toMap() => {'type': 'audio', 'data': data.toList()};
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AudioContent &&
           runtimeType == other.runtimeType &&
-          sampleRate == other.sampleRate;
+          _bytesEqual(data, other.data);
 
   @override
-  int get hashCode => Object.hash(data, sampleRate);
+  int get hashCode => Object.hashAll(data);
 
   @override
-  String toString() =>
-      'AudioContent(sampleRate: $sampleRate, samples: ${data.length})';
+  String toString() => 'AudioContent(size: ${data.length} bytes)';
 }
 
 /// A message in a chat conversation.
@@ -235,6 +223,15 @@ class ChatMessage {
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+/// Compares two byte arrays for equality.
+bool _bytesEqual(Uint8List a, Uint8List b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     if (a[i] != b[i]) return false;
