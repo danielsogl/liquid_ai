@@ -1,16 +1,28 @@
-# example
+# Liquid AI Example
 
-A new Flutter project.
+A complete example demonstrating the `liquid_ai` package features.
 
-## Getting Started
+## Features Demonstrated
 
-This project is a starting point for a Flutter application.
+- **Model Selection** - Browse and select from available LEAP models
+- **Chat Interface** - Real-time streaming chat with on-device AI
+- **Settings** - Configure generation options (temperature, top-p, max tokens)
 
-A few resources to get you started if this is your first Flutter project:
+## Running the Example
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. Ensure you have Flutter installed and configured for iOS/Android development
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+2. Get dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+3. Run on a device or simulator:
+   ```bash
+   flutter run
+   ```
+
+## Requirements
+
+- iOS 15.0+ or Android API 31+ (Android 12)
+- Physical device recommended for best performance

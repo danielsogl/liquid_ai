@@ -22,7 +22,7 @@ Run powerful on-device AI models in your Flutter apps with the LEAP SDK. Support
 | Platform | Supported | Notes |
 |----------|-----------|-------|
 | iOS      | Yes       | iOS 15.0+ required |
-| Android  | Yes       | API 24+ (Android 7.0) |
+| Android  | Yes       | API 31+ (Android 12) |
 | macOS    | No        | Not yet supported |
 | Web      | No        | Native inference only |
 
