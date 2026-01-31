@@ -79,10 +79,20 @@ class _StructuredDemoScreenState extends State<StructuredDemoScreen> {
 
     try {
       final runner = chatState.runner!;
+
+      // Include schema in system prompt for better model alignment
+      final schemaJson = _currentDemo.schema.toJsonString();
+      final systemPrompt = '''You are a helpful assistant that always responds in valid JSON format.
+Your response must exactly match this JSON schema:
+$schemaJson
+
+Important:
+- Output ONLY the JSON object, no explanations or markdown
+- Include ALL required fields
+- Use the exact field names from the schema''';
+
       final conversation = await runner.createConversation(
-        systemPrompt:
-            'You are a helpful assistant that always responds in valid JSON '
-            'format. Never include explanations outside the JSON object.',
+        systemPrompt: systemPrompt,
       );
 
       final options = const GenerationOptions(
