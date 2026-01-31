@@ -54,6 +54,10 @@ class ChatMessageUI {
   }
 }
 
+/// Default system prompt for conversations.
+const _defaultSystemPrompt =
+    'You are a helpful AI assistant. Be concise and helpful.';
+
 /// Manages chat state for a conversation with a loaded model.
 class ChatState extends ChangeNotifier {
   ChatState();
@@ -77,6 +81,9 @@ class ChatState extends ChangeNotifier {
     maxTokens: 1024,
   );
 
+  /// The current system prompt.
+  String _systemPrompt = _defaultSystemPrompt;
+
   /// Whether a generation is in progress.
   bool _isGenerating = false;
 
@@ -94,6 +101,9 @@ class ChatState extends ChangeNotifier {
 
   /// Gets the current generation options.
   GenerationOptions get options => _options;
+
+  /// Gets the current system prompt.
+  String get systemPrompt => _systemPrompt;
 
   /// Gets the current runner.
   ModelRunner? get runner => _runner;
@@ -119,11 +129,12 @@ class ChatState extends ChangeNotifier {
     if (!preserveMessages) {
       _messages.clear();
     }
+    if (systemPrompt != null) {
+      _systemPrompt = systemPrompt;
+    }
 
     _conversation = await runner.createConversation(
-      systemPrompt:
-          systemPrompt ??
-          'You are a helpful AI assistant. Be concise and helpful.',
+      systemPrompt: _systemPrompt,
     );
 
     notifyListeners();
@@ -259,6 +270,23 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates the system prompt and recreates the conversation.
+  ///
+  /// Note: This clears the conversation history.
+  Future<void> updateSystemPrompt(String newPrompt) async {
+    if (_runner == null) return;
+
+    _systemPrompt = newPrompt;
+    await _conversation?.dispose();
+    _messages.clear();
+
+    _conversation = await _runner!.createConversation(
+      systemPrompt: _systemPrompt,
+    );
+
+    notifyListeners();
+  }
+
   /// Clears the conversation and starts fresh.
   Future<void> clearConversation() async {
     if (_runner == null) return;
@@ -267,7 +295,7 @@ class ChatState extends ChangeNotifier {
     _messages.clear();
 
     _conversation = await _runner!.createConversation(
-      systemPrompt: 'You are a helpful AI assistant. Be concise and helpful.',
+      systemPrompt: _systemPrompt,
     );
 
     notifyListeners();

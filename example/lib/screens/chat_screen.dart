@@ -523,6 +523,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _showSettingsSheet(BuildContext context, ChatState chatState) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) => _SettingsSheet(chatState: chatState),
     );
   }
@@ -887,31 +888,116 @@ class _SettingsSheet extends StatefulWidget {
 }
 
 class _SettingsSheetState extends State<_SettingsSheet> {
+  late TextEditingController _systemPromptController;
   late double _temperature;
   late double _topP;
   late int _maxTokens;
+  bool _systemPromptChanged = false;
 
   @override
   void initState() {
     super.initState();
+    _systemPromptController = TextEditingController(
+      text: widget.chatState.systemPrompt,
+    );
     _temperature = widget.chatState.options.temperature ?? 0.7;
     _topP = widget.chatState.options.topP ?? 0.9;
     _maxTokens = widget.chatState.options.maxTokens ?? 1024;
   }
 
   @override
+  void dispose() {
+    _systemPromptController.dispose();
+    super.dispose();
+  }
+
+  void _checkSystemPromptChanged() {
+    final changed =
+        _systemPromptController.text != widget.chatState.systemPrompt;
+    if (changed != _systemPromptChanged) {
+      setState(() => _systemPromptChanged = changed);
+    }
+  }
+
+  Future<void> _applySettings() async {
+    // Update generation options (doesn't clear conversation)
+    widget.chatState.updateOptions(
+      GenerationOptions(
+        temperature: _temperature,
+        topP: _topP,
+        maxTokens: _maxTokens,
+      ),
+    );
+
+    // Update system prompt if changed (clears conversation)
+    if (_systemPromptChanged) {
+      await widget.chatState.updateSystemPrompt(_systemPromptController.text);
+    }
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text('Settings', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 24),
+          // System Prompt Section
+          Text('System Prompt', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _systemPromptController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Enter system prompt...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+            onChanged: (_) => _checkSystemPromptChanged(),
+          ),
+          if (_systemPromptChanged)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Changing the system prompt will clear the conversation.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 24),
+          // Generation Settings Section
           Text(
             'Generation Settings',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: Theme.of(context).textTheme.titleSmall,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           _SliderSetting(
             label: 'Temperature',
             value: _temperature,
@@ -948,16 +1034,7 @@ class _SettingsSheetState extends State<_SettingsSheet> {
               ),
               const SizedBox(width: 8),
               FilledButton(
-                onPressed: () {
-                  widget.chatState.updateOptions(
-                    GenerationOptions(
-                      temperature: _temperature,
-                      topP: _topP,
-                      maxTokens: _maxTokens,
-                    ),
-                  );
-                  Navigator.pop(context);
-                },
+                onPressed: _applySettings,
                 child: const Text('Apply'),
               ),
             ],
