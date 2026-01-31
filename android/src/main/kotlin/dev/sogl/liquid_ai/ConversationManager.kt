@@ -2,21 +2,18 @@ package dev.sogl.liquid_ai
 
 import ai.liquid.leap.Conversation
 import ai.liquid.leap.GenerationOptions
-import ai.liquid.leap.ModelRunner
 import ai.liquid.leap.message.ChatMessage
-import ai.liquid.leap.message.ChatMessageContent
 import ai.liquid.leap.message.MessageResponse
-import ai.liquid.leap.message.GenerationFinishReason
 import ai.liquid.leap.function.LeapFunction
 import ai.liquid.leap.function.LeapFunctionParameter
 import ai.liquid.leap.function.LeapFunctionParameterType
+import ai.liquid.leap.gson.registerLeapAdapters
+import com.google.gson.GsonBuilder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -29,6 +26,9 @@ class ConversationManager(
     private val activeGenerations = ConcurrentHashMap<String, Job>()
     private val cancelledGenerations = ConcurrentHashMap.newKeySet<String>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /// Gson instance with Leap SDK adapters for ChatMessage serialization.
+    private val gson = GsonBuilder().registerLeapAdapters().create()
 
     // MARK: - Conversation Lifecycle
 
@@ -49,11 +49,11 @@ class ConversationManager(
             runner.createConversation()
         }
 
-        val history = mutableListOf<ChatMessageData>()
+        val history = mutableListOf<ChatMessage>()
         if (systemPrompt != null) {
-            history.add(ChatMessageData(
-                role = "system",
-                content = listOf(ContentData("text", systemPrompt))
+            history.add(ChatMessage(
+                role = ChatMessage.Role.SYSTEM,
+                textContent = systemPrompt
             ))
         }
 
@@ -76,7 +76,7 @@ class ConversationManager(
             ?: throw ConversationException("Model runner not found: $runnerId")
 
         val conversationId = UUID.randomUUID().toString()
-        val messages = history.mapNotNull { parseChatMessage(it) }.toMutableList()
+        val messages = history.mapNotNull { parseFlutterMessageToSdk(it) }.toMutableList()
 
         // Create conversation - SDK may support history initialization
         val conversation = runner.createConversation()
@@ -96,7 +96,7 @@ class ConversationManager(
         val state = conversations[conversationId]
             ?: throw ConversationException("Conversation not found: $conversationId")
 
-        return state.history.map { serializeChatMessage(it) }
+        return state.history.map { serializeSdkMessageToFlutter(it) }
     }
 
     /// Disposes of a conversation.
@@ -104,18 +104,18 @@ class ConversationManager(
         conversations.remove(conversationId)
     }
 
-    /// Exports a conversation as JSON.
+    /// Exports a conversation as JSON using Gson with Leap SDK adapters.
     fun exportConversation(conversationId: String): String {
         val state = conversations[conversationId]
             ?: throw ConversationException("Conversation not found: $conversationId")
 
-        val json = JSONObject().apply {
-            put("conversationId", conversationId)
-            put("runnerId", state.runnerId)
-            put("messages", JSONArray(state.history.map { serializeChatMessage(it) }))
-        }
+        val export = mapOf(
+            "conversationId" to conversationId,
+            "runnerId" to state.runnerId,
+            "messages" to state.history
+        )
 
-        return json.toString(2)
+        return gson.toJson(export)
     }
 
     // MARK: - Generation
@@ -129,17 +129,14 @@ class ConversationManager(
         val state = conversations[conversationId]
             ?: throw ConversationException("Conversation not found: $conversationId")
 
-        val flutterMessage = parseChatMessage(message)
+        val sdkMessage = parseFlutterMessageToSdk(message)
             ?: throw ConversationException("Invalid message format")
 
         val generationId = UUID.randomUUID().toString()
         cancelledGenerations.remove(generationId)
 
         // Add message to our history tracking
-        state.history.add(flutterMessage)
-
-        // Create SDK ChatMessage with proper role
-        val sdkMessage = createSdkChatMessage(flutterMessage)
+        state.history.add(sdkMessage)
 
         val job = scope.launch {
             try {
@@ -190,9 +187,9 @@ class ConversationManager(
                     }
                     .onCompletion { error ->
                         if (error == null && !cancelledGenerations.contains(generationId)) {
-                            val assistantMessage = ChatMessageData(
-                                role = "assistant",
-                                content = listOf(ContentData("text", generatedText.toString()))
+                            val assistantMessage = ChatMessage(
+                                role = ChatMessage.Role.ASSISTANT,
+                                textContent = generatedText.toString()
                             )
 
                             state.history.add(assistantMessage)
@@ -204,7 +201,7 @@ class ConversationManager(
 
                             progressHandler.sendComplete(
                                 generationId = generationId,
-                                message = serializeChatMessage(assistantMessage),
+                                message = serializeSdkMessageToFlutter(assistantMessage),
                                 finishReason = "stop",
                                 stats = mapOf(
                                     "tokenCount" to tokenCount,
@@ -300,9 +297,9 @@ class ConversationManager(
             ?: throw ConversationException("Result text is required")
 
         // Add function result as a user message so the model can process it
-        state.history.add(ChatMessageData(
-            role = "user",
-            content = listOf(ContentData("text", "Function call $callId result: $resultText"))
+        state.history.add(ChatMessage(
+            role = ChatMessage.Role.USER,
+            textContent = "Function call $callId result: $resultText"
         ))
 
         android.util.Log.d("LiquidAI", "Provided function result for call: $callId")
@@ -416,15 +413,14 @@ class ConversationManager(
 
     // MARK: - Private Helpers
 
-    /// Creates an SDK ChatMessage from our internal ChatMessageData.
-    private fun createSdkChatMessage(message: ChatMessageData): ChatMessage {
-        // Extract text content
-        val textContent = message.content
-            .filter { it.type == "text" }
-            .joinToString(" ") { it.value }
+    /// Parses a Flutter message map into an SDK ChatMessage.
+    @Suppress("UNCHECKED_CAST")
+    private fun parseFlutterMessageToSdk(map: Map<String, Any>): ChatMessage? {
+        val roleString = map["role"] as? String ?: return null
+        val contentList = map["content"] as? List<Map<String, Any>> ?: return null
 
         // Map role string to SDK role enum
-        val role = when (message.role) {
+        val role = when (roleString) {
             "system" -> ChatMessage.Role.SYSTEM
             "user" -> ChatMessage.Role.USER
             "assistant" -> ChatMessage.Role.ASSISTANT
@@ -432,60 +428,36 @@ class ConversationManager(
             else -> ChatMessage.Role.USER
         }
 
+        // Extract text content (primary use case)
+        val textContent = contentList
+            .filter { it["type"] == "text" }
+            .mapNotNull { it["text"] as? String }
+            .joinToString(" ")
+
         return ChatMessage(role = role, textContent = textContent)
     }
 
-    private fun parseChatMessage(map: Map<String, Any>): ChatMessageData? {
-        val roleString = map["role"] as? String ?: return null
-        @Suppress("UNCHECKED_CAST")
-        val contentList = map["content"] as? List<Map<String, Any>> ?: return null
-
-        val content = contentList.mapNotNull { item ->
-            val type = item["type"] as? String ?: return@mapNotNull null
-            when (type) {
-                "text" -> {
-                    val text = item["text"] as? String ?: return@mapNotNull null
-                    ContentData("text", text)
-                }
-                "image" -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val data = item["data"] as? List<Int> ?: return@mapNotNull null
-                    val mimeType = item["mimeType"] as? String ?: "image/jpeg"
-                    ContentData("image", data.joinToString(","), mimeType)
-                }
-                "audio" -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val data = item["data"] as? List<Double> ?: return@mapNotNull null
-                    val sampleRate = item["sampleRate"] as? Int ?: 16000
-                    ContentData("audio", data.joinToString(","), sampleRate = sampleRate)
-                }
-                else -> null
-            }
+    /// Serializes an SDK ChatMessage to a Flutter-compatible map.
+    private fun serializeSdkMessageToFlutter(message: ChatMessage): Map<String, Any> {
+        val roleString = when (message.role) {
+            ChatMessage.Role.SYSTEM -> "system"
+            ChatMessage.Role.USER -> "user"
+            ChatMessage.Role.ASSISTANT -> "assistant"
+            ChatMessage.Role.TOOL -> "tool"
         }
 
-        return ChatMessageData(role = roleString, content = content)
-    }
+        // Build content list from SDK message
+        val contentList = mutableListOf<Map<String, Any>>()
 
-    private fun serializeChatMessage(message: ChatMessageData): Map<String, Any> {
-        val contentList = message.content.map { item ->
-            when (item.type) {
-                "text" -> mapOf("type" to "text", "text" to item.value)
-                "image" -> mapOf(
-                    "type" to "image",
-                    "data" to item.value.split(",").map { it.toInt() },
-                    "mimeType" to (item.mimeType ?: "image/jpeg")
-                )
-                "audio" -> mapOf(
-                    "type" to "audio",
-                    "data" to item.value.split(",").map { it.toDouble() },
-                    "sampleRate" to (item.sampleRate ?: 16000)
-                )
-                else -> mapOf("type" to item.type, "text" to item.value)
+        // Add text content if present
+        message.textContent?.let { text ->
+            if (text.isNotEmpty()) {
+                contentList.add(mapOf("type" to "text", "text" to text))
             }
         }
 
         return mapOf(
-            "role" to message.role,
+            "role" to roleString,
             "content" to contentList
         )
     }
@@ -497,21 +469,7 @@ class ConversationManager(
 data class ConversationState(
     val runnerId: String,
     val conversation: Conversation,
-    val history: MutableList<ChatMessageData>
-)
-
-/// Internal representation of a chat message.
-data class ChatMessageData(
-    val role: String,
-    val content: List<ContentData>
-)
-
-/// Internal representation of message content.
-data class ContentData(
-    val type: String,
-    val value: String,
-    val mimeType: String? = null,
-    val sampleRate: Int? = null
+    val history: MutableList<ChatMessage>
 )
 
 /// Exception for conversation errors.
