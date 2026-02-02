@@ -34,7 +34,7 @@ Add `liquid_ai` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  liquid_ai: ^0.0.1
+  liquid_ai: ^1.2.0
 ```
 
 ### iOS Setup
@@ -681,6 +681,17 @@ Key classes:
 - [`JsonSchema`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/JsonSchema-class.html) - Schema builder for structured output
 - [`LeapFunction`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/LeapFunction-class.html) - Function definition for tool use
 - [`ModelCatalog`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/ModelCatalog-class.html) - Model discovery and filtering
+
+## Examples
+
+For a comprehensive example covering all features, see [`example/example.dart`](https://github.com/danielsogl/liquid_ai/blob/main/example/example.dart).
+
+The [`example/`](https://github.com/danielsogl/liquid_ai/tree/main/example) directory also contains a full Flutter demo app demonstrating:
+- Model selection and downloading
+- Chat interface with streaming
+- Structured output demos
+- Function calling examples
+- Settings and configuration
 
 ## Contributing
 
