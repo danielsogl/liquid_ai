@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/danielsogl/liquid_ai/compare/v1.2.0...v1.2.1) (2026-02-02)
+
+
+### Bug Fixes
+
+* trigger release for updated example documentation ([ff358c6](https://github.com/danielsogl/liquid_ai/commit/ff358c63d19057443046a6aaeae0b9eebd2b2c19))
+
 ## [1.2.0](https://github.com/danielsogl/liquid_ai/compare/v1.1.0...v1.2.0) (2026-02-02)
 
 
