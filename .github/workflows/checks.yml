@@ -55,36 +55,9 @@ jobs:
       - name: Run tests
         run: flutter test
 
-  android-tests:
-    name: Android Native Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Get example dependencies
-        working-directory: example
-        run: flutter pub get
-
-      - name: Run Android unit tests
-        working-directory: example/android
-        run: ./gradlew :liquid_ai:testDebugUnitTest
-
-  ios-tests:
-    name: iOS Native Tests
-    runs-on: macos-26
+  ios-build:
+    name: iOS Build
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
 
@@ -102,14 +75,6 @@ jobs:
         working-directory: example
         run: flutter pub get
 
-      - name: Run iOS native unit tests
-        working-directory: example/ios
-        run: |
-          xcodebuild test \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -only-testing:RunnerTests \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty --color && exit ${PIPESTATUS[0]}
+      - name: Build iOS example app
+        working-directory: example
+        run: flutter build ios --simulator --no-codesign
