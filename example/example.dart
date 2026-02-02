@@ -9,6 +9,10 @@
 /// - Generate structured JSON output
 /// - Use function calling (tool use)
 /// - Browse the model catalog
+/// - Download models from URLs (Hugging Face support)
+/// - Download split vision models
+/// - Manage cached models
+/// - Access model manifest metadata
 library;
 
 import 'dart:typed_data';
@@ -340,6 +344,120 @@ void main() async {
 
   // Delete a model when no longer needed
   // await liquidAi.deleteModel(model.slug, quantization.slug);
+
+  // ============================================================
+  // 11. Download Models from URL (Hugging Face Support)
+  // ============================================================
+
+  // Download a model directly from any URL, including Hugging Face
+  print('\nDownloading model from URL (example)...');
+  // await for (final event in liquidAi.downloadModelFromUrl(
+  //   url: 'https://huggingface.co/user/model/resolve/main/model.gguf?download=true',
+  //   modelId: 'my-hf-model',
+  //   quantization: 'Q4_K_M', // Optional, defaults to 'custom'
+  // )) {
+  //   switch (event) {
+  //     case DownloadStartedEvent():
+  //       print('Download started');
+  //     case DownloadProgressEvent(:final progress):
+  //       print('Progress: ${(progress.progress * 100).toStringAsFixed(1)}%');
+  //     case DownloadCompleteEvent():
+  //       print('Download complete!');
+  //     case DownloadErrorEvent(:final error):
+  //       print('Error: $error');
+  //     case DownloadCancelledEvent():
+  //       print('Cancelled');
+  //   }
+  // }
+
+  // ============================================================
+  // 12. Download Split Vision Models
+  // ============================================================
+
+  // Some vision models require separate files for language model and projector
+  print('\nDownloading split vision model (example)...');
+  // await for (final event in liquidAi.downloadSplitModel(
+  //   urls: [
+  //     'https://huggingface.co/.../language-model.gguf?download=true',
+  //     'https://huggingface.co/.../mmproj.gguf?download=true',
+  //   ],
+  //   modelId: 'my-vision-model',
+  // )) {
+  //   switch (event) {
+  //     case DownloadProgressEvent(:final progress):
+  //       print('Progress: ${(progress.progress * 100).toStringAsFixed(1)}%');
+  //     case DownloadCompleteEvent():
+  //       print('All files downloaded!');
+  //     default:
+  //       break;
+  //   }
+  // }
+
+  // ============================================================
+  // 13. Cache Management
+  // ============================================================
+
+  // Check if a specific model is cached (useful for URL-downloaded models)
+  final isCached = await liquidAi.isModelCached('my-custom-model');
+  print('\nIs "my-custom-model" cached: $isCached');
+
+  // List all cached models
+  print('\n--- Cached Models ---');
+  final cachedModels = await liquidAi.getCachedModels();
+  for (final manifest in cachedModels) {
+    print('${manifest.modelSlug} (${manifest.quantizationSlug})');
+    print('  Path: ${manifest.localModelPath}');
+    if (manifest.supportsVision) {
+      print('  Projector: ${manifest.projectorPath}');
+    }
+    if (manifest.supportsAudio) {
+      print('  Audio Decoder: ${manifest.audioDecoderPath}');
+    }
+  }
+
+  // Delete all cached models (use with caution!)
+  // await liquidAi.deleteAllModels();
+  // print('All models deleted');
+
+  // ============================================================
+  // 14. Model Manifest
+  // ============================================================
+
+  // Access extended metadata through ModelManifest
+  print('\n--- Model Manifest ---');
+
+  // The manifest is available on LoadCompleteEvent and ModelRunner
+  // Re-demonstrating with inline comments since we already loaded above
+  // await for (final event in liquidAi.loadModel(model.slug, quantization.slug)) {
+  //   if (event is LoadCompleteEvent) {
+  //     final manifest = event.manifest;
+  //     if (manifest != null) {
+  //       print('Model: ${manifest.modelSlug}');
+  //       print('Quantization: ${manifest.quantizationSlug}');
+  //       print('Local Path: ${manifest.localModelPath}');
+  //       print('Supports Vision: ${manifest.supportsVision}');
+  //       print('Supports Audio: ${manifest.supportsAudio}');
+  //       if (manifest.chatTemplate != null) {
+  //         print('Chat Template: ${manifest.chatTemplate}');
+  //       }
+  //     }
+  //
+  //     // Also available on the runner
+  //     print('Runner manifest: ${event.runner.manifest}');
+  //   }
+  // }
+
+  // Check manifest on existing runner
+  if (runner.manifest != null) {
+    final m = runner.manifest!;
+    print('Current runner manifest:');
+    print('  Model: ${m.modelSlug}');
+    print('  Quantization: ${m.quantizationSlug}');
+    print('  Vision support: ${m.supportsVision}');
+    print('  Audio support: ${m.supportsAudio}');
+  } else {
+    print('No manifest available (depends on native implementation)');
+  }
 
   // ============================================================
   // Cleanup

@@ -1,6 +1,7 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../models/load_options.dart';
+import '../models/model_manifest.dart';
 import '../models/model_status.dart';
 import 'method_channel_liquid_ai.dart';
 
@@ -28,6 +29,31 @@ abstract class LiquidAiPlatform extends PlatformInterface {
 
   /// Downloads a model and returns the operation ID.
   Future<String> downloadModel(String model, String quantization);
+
+  /// Downloads a model from a direct URL and returns the operation ID.
+  ///
+  /// This allows downloading models from any URL, including Hugging Face.
+  /// The [modelId] is used as the local identifier for the downloaded model.
+  /// The [quantization] is used for categorization (defaults to 'custom').
+  Future<String> downloadModelFromUrl(
+    String url,
+    String modelId, {
+    String quantization = 'custom',
+  });
+
+  /// Downloads a split model from multiple URLs and returns the operation ID.
+  ///
+  /// Some vision models require separate files for the language model
+  /// and the multimodal projector. This method downloads all files
+  /// and links them together.
+  ///
+  /// The first URL should be the main language model file.
+  /// Additional URLs can be projector files or other components.
+  Future<String> downloadSplitModel(
+    List<String> urls,
+    String modelId, {
+    String quantization = 'custom',
+  });
 
   /// Loads a model and returns the operation ID.
   ///
@@ -78,6 +104,22 @@ abstract class LiquidAiPlatform extends PlatformInterface {
 
   /// Deletes a downloaded model.
   Future<void> deleteModel(String model, String quantization);
+
+  /// Lists all cached models.
+  ///
+  /// Returns a list of [ModelManifest] objects for all locally cached models.
+  Future<List<ModelManifest>> getCachedModels();
+
+  /// Checks if a model with the given [modelId] is cached.
+  ///
+  /// This is useful for checking models downloaded via [downloadModelFromUrl]
+  /// or [downloadSplitModel] where a custom model ID was specified.
+  Future<bool> isModelCached(String modelId);
+
+  /// Deletes all cached models.
+  ///
+  /// This removes all locally stored model files.
+  Future<void> deleteAllModels();
 
   /// Cancels an ongoing operation.
   Future<void> cancelOperation(String operationId);

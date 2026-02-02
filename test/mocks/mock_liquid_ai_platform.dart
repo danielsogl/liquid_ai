@@ -341,6 +341,64 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   }
 
   @override
+  Future<List<ModelManifest>> getCachedModels() async {
+    final models = <ModelManifest>[];
+    for (final key in downloadedModels.keys) {
+      final parts = key.split(':');
+      if (parts.length == 2) {
+        models.add(
+          ModelManifest(
+            modelSlug: parts[0],
+            quantizationSlug: parts[1],
+            localModelPath: '/mock/path/${parts[0]}_${parts[1]}.gguf',
+          ),
+        );
+      }
+    }
+    return models;
+  }
+
+  @override
+  Future<bool> isModelCached(String modelId) async {
+    return downloadedModels.keys.any((key) => key.startsWith('$modelId:'));
+  }
+
+  @override
+  Future<void> deleteAllModels() async {
+    downloadedModels.clear();
+  }
+
+  @override
+  Future<String> downloadModelFromUrl(
+    String url,
+    String modelId, {
+    String quantization = 'custom',
+  }) async {
+    final operationId = 'op_${++_operationCounter}';
+    final key = '$modelId:$quantization';
+
+    // Schedule events to be emitted after the method returns
+    unawaited(_emitDownloadEvents(operationId, key));
+
+    return operationId;
+  }
+
+  @override
+  Future<String> downloadSplitModel(
+    List<String> urls,
+    String modelId, {
+    String quantization = 'custom',
+  }) async {
+    final operationId = 'op_${++_operationCounter}';
+    final key = '$modelId:$quantization';
+
+    // Schedule events to be emitted after the method returns
+    unawaited(_emitDownloadEvents(operationId, key));
+
+    return operationId;
+  }
+
+  @override
   Future<void> cancelOperation(String operationId) async {
     _cancelledOperations.add(operationId);
     _safeAdd({

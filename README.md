@@ -176,6 +176,104 @@ final status = await liquidAi.getModelStatus(model.slug, quantization.slug);
 await liquidAi.deleteModel(model.slug, quantization.slug);
 ```
 
+### Download from URL (Hugging Face Support)
+
+Download models directly from any URL, including Hugging Face:
+
+```dart
+await for (final event in liquidAi.downloadModelFromUrl(
+  url: 'https://huggingface.co/user/model/resolve/main/model.gguf?download=true',
+  modelId: 'my-custom-model',
+  quantization: 'Q4_K_M', // Optional, defaults to 'custom'
+)) {
+  switch (event) {
+    case DownloadProgressEvent(:final progress):
+      print('${(progress.progress * 100).toStringAsFixed(1)}%');
+    case DownloadCompleteEvent():
+      print('Download complete!');
+    case DownloadErrorEvent(:final error):
+      print('Error: $error');
+    default:
+      break;
+  }
+}
+
+// Then load the downloaded model
+await for (final event in liquidAi.loadModel('my-custom-model', 'Q4_K_M')) {
+  // Handle load events...
+}
+```
+
+### Download Split Vision Models
+
+Some vision models require separate files for the language model and multimodal projector:
+
+```dart
+await for (final event in liquidAi.downloadSplitModel(
+  urls: [
+    'https://huggingface.co/.../language-model.gguf?download=true',
+    'https://huggingface.co/.../mmproj.gguf?download=true',
+  ],
+  modelId: 'my-vision-model',
+)) {
+  switch (event) {
+    case DownloadProgressEvent(:final progress):
+      print('${(progress.progress * 100).toStringAsFixed(1)}%');
+    case DownloadCompleteEvent():
+      print('All files downloaded!');
+    default:
+      break;
+  }
+}
+```
+
+### Cache Management
+
+List and manage cached models:
+
+```dart
+// Check if a specific model is cached (useful for URL-downloaded models)
+final isCached = await liquidAi.isModelCached('my-custom-model');
+if (!isCached) {
+  // Download the model...
+}
+
+// List all cached models
+final cachedModels = await liquidAi.getCachedModels();
+for (final manifest in cachedModels) {
+  print('${manifest.modelSlug} (${manifest.quantizationSlug})');
+  print('  Path: ${manifest.localModelPath}');
+  if (manifest.supportsVision) {
+    print('  Projector: ${manifest.projectorPath}');
+  }
+}
+
+// Delete all cached models to free storage
+await liquidAi.deleteAllModels();
+```
+
+### Model Manifest
+
+When a model is loaded, you can access extended metadata through the `ModelManifest`:
+
+```dart
+await for (final event in liquidAi.loadModel(model.slug, quantization.slug)) {
+  if (event is LoadCompleteEvent) {
+    final manifest = event.manifest;
+    if (manifest != null) {
+      print('Model: ${manifest.modelSlug}');
+      print('Quantization: ${manifest.quantizationSlug}');
+      print('Path: ${manifest.localModelPath}');
+      print('Supports Vision: ${manifest.supportsVision}');
+      print('Supports Audio: ${manifest.supportsAudio}');
+
+      // Access via runner as well
+      print('Runner manifest: ${event.runner.manifest}');
+    }
+  }
+}
+```
+
 ## Text Generation
 
 ### Simple Generation
@@ -606,6 +704,7 @@ Key classes:
 - [`LiquidAi`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/LiquidAi-class.html) - Main entry point for model management
 - [`ModelRunner`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/ModelRunner-class.html) - A loaded model ready for inference
 - [`ModelManager`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/ModelManager-class.html) - Singleton for single-model lifecycle management
+- [`ModelManifest`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/ModelManifest-class.html) - Extended metadata for loaded models
 - [`Conversation`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/Conversation-class.html) - Chat session with history
 - [`JsonSchema`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/JsonSchema-class.html) - Schema builder for structured output
 - [`LeapFunction`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/LeapFunction-class.html) - Function definition for tool use

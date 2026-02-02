@@ -1,5 +1,6 @@
 import '../exceptions/liquid_ai_exception.dart';
 import 'download_progress.dart';
+import 'model_manifest.dart';
 import 'model_runner.dart';
 
 /// Base class for load operation events.
@@ -35,13 +36,22 @@ final class LoadProgressEvent extends LoadEvent {
 /// Event indicating load completed successfully.
 final class LoadCompleteEvent extends LoadEvent {
   /// Creates a new [LoadCompleteEvent].
-  LoadCompleteEvent({required this.operationId, required this.runner});
+  LoadCompleteEvent({
+    required this.operationId,
+    required this.runner,
+    this.manifest,
+  });
 
   @override
   final String operationId;
 
   /// The loaded model runner.
   final ModelRunner runner;
+
+  /// The manifest containing metadata about the loaded model.
+  ///
+  /// This may be null if the model was loaded without manifest information.
+  final ModelManifest? manifest;
 }
 
 /// Event indicating load failed.

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../models/load_options.dart';
+import '../models/model_manifest.dart';
 import '../models/model_status.dart';
 import 'liquid_ai_platform_interface.dart';
 
@@ -31,6 +32,32 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
     final operationId = await methodChannel.invokeMethod<String>(
       'downloadModel',
       {'model': model, 'quantization': quantization},
+    );
+    return operationId!;
+  }
+
+  @override
+  Future<String> downloadModelFromUrl(
+    String url,
+    String modelId, {
+    String quantization = 'custom',
+  }) async {
+    final operationId = await methodChannel.invokeMethod<String>(
+      'downloadModelFromUrl',
+      {'url': url, 'modelId': modelId, 'quantization': quantization},
+    );
+    return operationId!;
+  }
+
+  @override
+  Future<String> downloadSplitModel(
+    List<String> urls,
+    String modelId, {
+    String quantization = 'custom',
+  }) async {
+    final operationId = await methodChannel.invokeMethod<String>(
+      'downloadSplitModel',
+      {'urls': urls, 'modelId': modelId, 'quantization': quantization},
     );
     return operationId!;
   }
@@ -94,6 +121,33 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
       'model': model,
       'quantization': quantization,
     });
+  }
+
+  @override
+  Future<List<ModelManifest>> getCachedModels() async {
+    final result = await methodChannel.invokeMethod<List<dynamic>>(
+      'getCachedModels',
+    );
+    if (result == null) return [];
+    return result
+        .map(
+          (item) =>
+              ModelManifest.fromMap(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+  }
+
+  @override
+  Future<bool> isModelCached(String modelId) async {
+    final result = await methodChannel.invokeMethod<bool>('isModelCached', {
+      'modelId': modelId,
+    });
+    return result ?? false;
+  }
+
+  @override
+  Future<void> deleteAllModels() async {
+    await methodChannel.invokeMethod<void>('deleteAllModels');
   }
 
   @override

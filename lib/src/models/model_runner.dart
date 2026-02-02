@@ -1,6 +1,7 @@
 import '../platform/liquid_ai_platform_interface.dart';
 import 'chat_message.dart';
 import 'conversation.dart';
+import 'model_manifest.dart';
 
 /// A loaded model runner that can perform inference.
 class ModelRunner {
@@ -9,6 +10,7 @@ class ModelRunner {
     required this.runnerId,
     required String model,
     required String quantization,
+    this.manifest,
     LiquidAiPlatform? platform,
   }) : _model = model,
        _quantization = quantization,
@@ -19,6 +21,7 @@ class ModelRunner {
   ModelRunner.fromPath({
     required this.runnerId,
     required String path,
+    this.manifest,
     LiquidAiPlatform? platform,
   }) : _model = null,
        _quantization = null,
@@ -36,18 +39,24 @@ class ModelRunner {
     final model = info['model'] as String?;
     final quantization = info['quantization'] as String?;
     final path = info['path'] as String?;
+    final manifestMap = info['manifest'] as Map<String, dynamic>?;
+    final manifest = manifestMap != null
+        ? ModelManifest.fromMap(manifestMap)
+        : null;
 
     if (model != null && quantization != null) {
       return ModelRunner(
         runnerId: runnerId,
         model: model,
         quantization: quantization,
+        manifest: manifest,
         platform: platform,
       );
     } else if (path != null) {
       return ModelRunner.fromPath(
         runnerId: runnerId,
         path: path,
+        manifest: manifest,
         platform: platform,
       );
     } else {
@@ -55,6 +64,7 @@ class ModelRunner {
       return ModelRunner.fromPath(
         runnerId: runnerId,
         path: '',
+        manifest: manifest,
         platform: platform,
       );
     }
@@ -62,6 +72,11 @@ class ModelRunner {
 
   /// The unique identifier for this runner.
   final String runnerId;
+
+  /// The manifest containing metadata about the loaded model.
+  ///
+  /// This may be null if the model was loaded without manifest information.
+  final ModelManifest? manifest;
 
   final String? _model;
   final String? _quantization;

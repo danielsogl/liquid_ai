@@ -133,17 +133,20 @@ void main() {
 
         final completeEvent = events.last as LoadCompleteEvent;
         expect(completeEvent.runner, isNotNull);
-        expect(completeEvent.runner.model, 'my-model');
-        expect(completeEvent.runner.quantization, 'local');
+        expect(completeEvent.runner.isPathLoaded, isTrue);
+        expect(completeEvent.runner.path, '/path/to/my-model.gguf');
+        expect(completeEvent.runner.model, isNull);
+        expect(completeEvent.runner.quantization, isNull);
       });
 
-      test('extracts model name from path without extension', () async {
+      test('stores full path for path-loaded models', () async {
         final events = await liquidAi
             .loadModelFromPath('/models/LFM2-1B-Q4_K_M.gguf')
             .toList();
 
         final completeEvent = events.last as LoadCompleteEvent;
-        expect(completeEvent.runner.model, 'LFM2-1B-Q4_K_M');
+        expect(completeEvent.runner.path, '/models/LFM2-1B-Q4_K_M.gguf');
+        expect(completeEvent.runner.isPathLoaded, isTrue);
       });
 
       test('handles path without extension', () async {
@@ -152,7 +155,8 @@ void main() {
             .toList();
 
         final completeEvent = events.last as LoadCompleteEvent;
-        expect(completeEvent.runner.model, 'mymodel');
+        expect(completeEvent.runner.path, '/models/mymodel');
+        expect(completeEvent.runner.isPathLoaded, isTrue);
       });
 
       test('emits error event on failure', () async {
