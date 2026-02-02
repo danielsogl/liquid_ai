@@ -213,7 +213,7 @@ final class GenerationCancelledEvent extends GenerationEvent {
 
 /// Event containing the result of a tool execution.
 ///
-/// This event is emitted by [Conversation.generateWithTools] after a tool
+/// This event is emitted by [Conversation.generateResponse] after a tool
 /// handler executes successfully. It allows the UI to display tool results.
 final class GenerationToolResultEvent extends GenerationEvent {
   /// Creates a new [GenerationToolResultEvent].
