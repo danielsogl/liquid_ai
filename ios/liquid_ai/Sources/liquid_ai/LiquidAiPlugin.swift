@@ -23,6 +23,8 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         "loadModel": handleLoadModel,
         "loadModelFromPath": handleLoadModelFromPath,
         "unloadModel": handleUnloadModel,
+        "getLoadedModelInfo": handleGetLoadedModelInfo,
+        "forceUnloadAll": handleForceUnloadAll,
         "isModelDownloaded": handleIsModelDownloaded,
         "deleteModel": handleDeleteModel,
         "cancelOperation": handleCancelOperation,
@@ -157,6 +159,24 @@ extension LiquidAiPlugin {
             let success = await modelManager.unloadModel(runnerId: runnerId)
             DispatchQueue.main.async {
                 result(success)
+            }
+        }
+    }
+
+    func handleGetLoadedModelInfo(_: FlutterMethodCall, result: @escaping FlutterResult) {
+        Task {
+            let info = await modelManager.getLoadedModelInfo()
+            DispatchQueue.main.async {
+                result(info)
+            }
+        }
+    }
+
+    func handleForceUnloadAll(_: FlutterMethodCall, result: @escaping FlutterResult) {
+        Task {
+            await modelManager.forceUnloadAll()
+            DispatchQueue.main.async {
+                result(nil)
             }
         }
     }

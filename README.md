@@ -504,6 +504,8 @@ if (tokens > 4000) {
 
 ## Resource Management
 
+### Basic Cleanup
+
 Always dispose of resources when done:
 
 ```dart
@@ -520,6 +522,81 @@ try {
 }
 ```
 
+### ModelManager for Single-Model Apps
+
+For apps that load only one model at a time, use `ModelManager` to automatically manage model lifecycle:
+
+```dart
+final manager = ModelManager.instance;
+
+// Load a model (automatically unloads any previous model)
+final runner = await manager.loadModelAsync('LFM2.5-1.2B-Instruct', 'Q4_K_M');
+
+// Check what's loaded
+print('Loaded: ${manager.currentModelSlug}');
+print('Has model: ${manager.hasLoadedModel}');
+
+// Load a different model (previous one is automatically unloaded first)
+final newRunner = await manager.loadModelAsync('LFM2-2.6B', 'Q4_K_M');
+
+// Explicitly unload when done
+await manager.unloadCurrentModel();
+```
+
+### Hot-Reload Recovery
+
+During Flutter hot-reload, Dart state is reset but native state persists. Use `syncWithNative()` to recover the loaded model state:
+
+```dart
+// In your app initialization
+Future<void> initializeApp() async {
+  final manager = ModelManager.instance;
+
+  // Sync Dart state with native state
+  final wasModelLoaded = await manager.syncWithNative();
+
+  if (wasModelLoaded) {
+    print('Recovered loaded model: ${manager.currentModelSlug}');
+    // The runner is available at manager.currentRunner
+  }
+}
+```
+
+This is especially important for state management solutions like Provider:
+
+```dart
+class AppState extends ChangeNotifier {
+  final _modelManager = ModelManager.instance;
+
+  Future<void> initialize() async {
+    // Recover model state after hot-reload
+    await _modelManager.syncWithNative();
+
+    if (_modelManager.hasLoadedModel) {
+      // Update UI state to reflect loaded model
+      notifyListeners();
+    }
+  }
+}
+```
+
+### Loading Models from Local Paths
+
+Load models from custom locations (useful for bundled or custom models):
+
+```dart
+// Using ModelManager
+final runner = await ModelManager.instance.loadModelFromPathAsync(
+  '/path/to/model.gguf',
+  options: LoadOptions(contextSize: 2048),
+);
+
+// Check if loaded from path
+if (ModelManager.instance.isCurrentModelPathLoaded) {
+  print('Model path: ${ModelManager.instance.currentPath}');
+}
+```
+
 ## API Reference
 
 For complete API documentation, see the [API Reference](https://pub.dev/documentation/liquid_ai/latest/).
@@ -528,6 +605,7 @@ Key classes:
 
 - [`LiquidAi`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/LiquidAi-class.html) - Main entry point for model management
 - [`ModelRunner`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/ModelRunner-class.html) - A loaded model ready for inference
+- [`ModelManager`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/ModelManager-class.html) - Singleton for single-model lifecycle management
 - [`Conversation`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/Conversation-class.html) - Chat session with history
 - [`JsonSchema`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/JsonSchema-class.html) - Schema builder for structured output
 - [`LeapFunction`](https://pub.dev/documentation/liquid_ai/latest/liquid_ai/LeapFunction-class.html) - Function definition for tool use

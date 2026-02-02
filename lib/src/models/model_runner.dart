@@ -4,22 +4,80 @@ import 'conversation.dart';
 
 /// A loaded model runner that can perform inference.
 class ModelRunner {
-  /// Creates a new [ModelRunner].
+  /// Creates a new [ModelRunner] for a catalog-loaded model.
   ModelRunner({
     required this.runnerId,
-    required this.model,
-    required this.quantization,
+    required String model,
+    required String quantization,
     LiquidAiPlatform? platform,
-  }) : _platform = platform ?? LiquidAiPlatform.instance;
+  }) : _model = model,
+       _quantization = quantization,
+       _path = null,
+       _platform = platform ?? LiquidAiPlatform.instance;
+
+  /// Creates a new [ModelRunner] for a path-loaded model.
+  ModelRunner.fromPath({
+    required this.runnerId,
+    required String path,
+    LiquidAiPlatform? platform,
+  }) : _model = null,
+       _quantization = null,
+       _path = path,
+       _platform = platform ?? LiquidAiPlatform.instance;
+
+  /// Creates a [ModelRunner] from native state info.
+  ///
+  /// Used to reconstruct a runner after hot-reload when syncing with native.
+  factory ModelRunner.fromNativeInfo(
+    Map<String, dynamic> info, {
+    LiquidAiPlatform? platform,
+  }) {
+    final runnerId = info['runnerId'] as String;
+    final model = info['model'] as String?;
+    final quantization = info['quantization'] as String?;
+    final path = info['path'] as String?;
+
+    if (model != null && quantization != null) {
+      return ModelRunner(
+        runnerId: runnerId,
+        model: model,
+        quantization: quantization,
+        platform: platform,
+      );
+    } else if (path != null) {
+      return ModelRunner.fromPath(
+        runnerId: runnerId,
+        path: path,
+        platform: platform,
+      );
+    } else {
+      // Fallback for edge cases where neither is set
+      return ModelRunner.fromPath(
+        runnerId: runnerId,
+        path: '',
+        platform: platform,
+      );
+    }
+  }
 
   /// The unique identifier for this runner.
   final String runnerId;
 
-  /// The model slug.
-  final String model;
+  final String? _model;
+  final String? _quantization;
+  final String? _path;
 
-  /// The quantization slug.
-  final String quantization;
+  /// The model slug, or null if loaded from path.
+  String? get model => _model;
+
+  /// The quantization slug, or null if loaded from path.
+  String? get quantization => _quantization;
+
+  /// The file path, or null if loaded from catalog.
+  String? get path => _path;
+
+  /// Whether this model was loaded from a local file path.
+  bool get isPathLoaded => _path != null;
 
   /// Whether this runner has been disposed.
   bool _isDisposed = false;

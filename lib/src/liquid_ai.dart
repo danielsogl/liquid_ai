@@ -49,6 +49,10 @@ class LiquidAi {
     void safeClose() {
       if (!isClosed) {
         isClosed = true;
+        // Cancel the subscription BEFORE closing the controller
+        // to avoid race conditions with the event channel
+        subscription?.cancel();
+        subscription = null;
         controller.close();
       }
     }
@@ -76,10 +80,13 @@ class LiquidAi {
         operationId = await _platform.downloadModel(model, quantization);
       },
       onCancel: () {
-        isClosed = true;
-        subscription?.cancel();
-        if (operationId != null) {
-          _platform.cancelOperation(operationId!);
+        if (!isClosed) {
+          isClosed = true;
+          subscription?.cancel();
+          subscription = null;
+          if (operationId != null) {
+            _platform.cancelOperation(operationId!);
+          }
         }
       },
     );
@@ -139,6 +146,10 @@ class LiquidAi {
     void safeClose() {
       if (!isClosed) {
         isClosed = true;
+        // Cancel the subscription BEFORE closing the controller
+        // to avoid race conditions with the event channel
+        subscription?.cancel();
+        subscription = null;
         controller.close();
       }
     }
@@ -175,10 +186,13 @@ class LiquidAi {
         );
       },
       onCancel: () {
-        isClosed = true;
-        subscription?.cancel();
-        if (operationId != null) {
-          _platform.cancelOperation(operationId!);
+        if (!isClosed) {
+          isClosed = true;
+          subscription?.cancel();
+          subscription = null;
+          if (operationId != null) {
+            _platform.cancelOperation(operationId!);
+          }
         }
       },
     );
@@ -239,6 +253,10 @@ class LiquidAi {
     void safeClose() {
       if (!isClosed) {
         isClosed = true;
+        // Cancel the subscription BEFORE closing the controller
+        // to avoid race conditions with the event channel
+        subscription?.cancel();
+        subscription = null;
         controller.close();
       }
     }
@@ -266,10 +284,13 @@ class LiquidAi {
         operationId = await _platform.loadModelFromPath(path, options: options);
       },
       onCancel: () {
-        isClosed = true;
-        subscription?.cancel();
-        if (operationId != null) {
-          _platform.cancelOperation(operationId!);
+        if (!isClosed) {
+          isClosed = true;
+          subscription?.cancel();
+          subscription = null;
+          if (operationId != null) {
+            _platform.cancelOperation(operationId!);
+          }
         }
       },
     );
@@ -320,6 +341,7 @@ class LiquidAi {
         return DownloadErrorEvent(
           operationId: operationId,
           error: event['error'] as String? ?? 'Unknown error',
+          errorCode: event['errorCode'] as String?,
         );
       case 'cancelled':
         return DownloadCancelledEvent(operationId: operationId);
@@ -367,6 +389,7 @@ class LiquidAi {
         return LoadErrorEvent(
           operationId: operationId,
           error: event['error'] as String? ?? 'Unknown error',
+          errorCode: event['errorCode'] as String?,
         );
       case 'cancelled':
         return LoadCancelledEvent(operationId: operationId);
@@ -418,6 +441,7 @@ class LiquidAi {
         return LoadErrorEvent(
           operationId: operationId,
           error: event['error'] as String? ?? 'Unknown error',
+          errorCode: event['errorCode'] as String?,
         );
       case 'cancelled':
         return LoadCancelledEvent(operationId: operationId);

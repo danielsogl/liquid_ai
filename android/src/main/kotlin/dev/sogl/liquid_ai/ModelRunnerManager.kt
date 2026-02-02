@@ -3,10 +3,29 @@ package dev.sogl.liquid_ai
 import ai.liquid.leap.ModelRunner
 import ai.liquid.leap.manifest.LeapDownloader
 import ai.liquid.leap.manifest.LeapDownloaderConfig
+import android.app.ActivityManager
 import android.content.Context
 import kotlinx.coroutines.*
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+
+// / Exception thrown when there's not enough memory to load a model.
+class InsufficientMemoryException(
+    val required: Long,
+    val available: Long,
+) : Exception(
+        "Insufficient memory to load model. " +
+            "Required: ~${required / (1024 * 1024)}MB, " +
+            "Available: ~${available / (1024 * 1024)}MB",
+    )
+
+// / Info about a loaded model for state recovery after hot-reload.
+data class LoadedModelInfo(
+    val runnerId: String,
+    val model: String?,
+    val quantization: String?,
+    val path: String?,
+)
 
 // / Manages model runners and download operations.
 class ModelRunnerManager(
@@ -17,6 +36,10 @@ class ModelRunnerManager(
     private val activeTasks = ConcurrentHashMap<String, Job>()
     private val cancelledOperations = ConcurrentHashMap.newKeySet<String>()
 
+    // / Info about the currently loaded model (for hot-reload recovery).
+    @Volatile
+    private var currentLoadedModelInfo: LoadedModelInfo? = null
+
     // Use an absolute path for model storage that we control
     private val modelStorageDir = java.io.File(context.filesDir, "leap_models")
     private val downloader =
@@ -24,6 +47,60 @@ class ModelRunnerManager(
             LeapDownloaderConfig(saveDir = modelStorageDir.absolutePath),
         )
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // / Gets the available memory on the device.
+    private fun getAvailableMemory(): Long {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        return memoryInfo.availMem
+    }
+
+    // / Estimates the memory required for a model based on file size.
+    // / Models typically need 1.2-1.5x their file size when loaded.
+    private fun estimateRequiredMemory(file: java.io.File): Long {
+        val fileSize = file.length()
+        // Estimate 1.5x file size for model loading overhead
+        return (fileSize * 1.5).toLong()
+    }
+
+    // / Checks if there's enough memory to load a model.
+    // / Throws InsufficientMemoryException if not.
+    private fun checkMemoryForModel(
+        model: String,
+        quantization: String,
+        minHeadroomMB: Long = 200,
+    ) {
+        val available = getAvailableMemory()
+
+        // Try to find the model file to estimate size
+        val folderName = "$model-$quantization"
+        val modelDir = java.io.File(modelStorageDir, folderName)
+
+        if (modelDir.exists() && modelDir.isDirectory) {
+            // Find the largest file (likely the model file)
+            val files = modelDir.listFiles() ?: emptyArray()
+            val largestFile = files.maxByOrNull { it.length() }
+
+            if (largestFile != null) {
+                val required = estimateRequiredMemory(largestFile)
+                // Add minimum headroom (200MB by default) for system stability
+                val headroom = minHeadroomMB * 1024 * 1024
+                val totalRequired = required + headroom
+
+                if (available < totalRequired) {
+                    throw InsufficientMemoryException(required, available)
+                }
+            }
+        } else {
+            // If we can't find the model, check for minimum available
+            // (500MB minimum for any model)
+            val minRequired = 500L * 1024 * 1024
+            if (available < minRequired) {
+                throw InsufficientMemoryException(minRequired, available)
+            }
+        }
+    }
 
     // / Recursively deletes a directory and all its contents.
     private fun deleteDirectoryRecursively(file: java.io.File): Boolean {
@@ -132,6 +209,7 @@ class ModelRunnerManager(
                             type = OperationType.DOWNLOAD,
                             status = OperationStatus.ERROR,
                             error = e.message ?: "Download failed",
+                            errorCode = parseErrorCode(e),
                         )
                     }
                     activeTasks.remove(operationId)
@@ -163,7 +241,8 @@ class ModelRunnerManager(
                 try {
                     // Clean up any existing partial downloads before starting
                     // This prevents "Path already exist" errors from kotlinx.io
-                    if (!isModelDownloaded(model, quantization)) {
+                    val alreadyDownloaded = isModelDownloaded(model, quantization)
+                    if (!alreadyDownloaded) {
                         cleanupPartialDownload(model, quantization)
                     }
 
@@ -172,14 +251,14 @@ class ModelRunnerManager(
                     var lastTime = System.currentTimeMillis()
                     var lastSpeed = 0L
 
-                    val runner =
-                        downloader.loadModel(model, quantization) { progressData ->
+                    // If not downloaded, download first (without loading)
+                    if (!alreadyDownloaded) {
+                        downloader.downloadModel(model, quantization) { progressData ->
                             if (!cancelledOperations.contains(operationId)) {
                                 val currentTime = System.currentTimeMillis()
                                 val currentBytes = progressData.bytes
                                 val elapsedMs = currentTime - lastTime
 
-                                // Only recalculate speed if enough time has passed (100ms minimum)
                                 val speed =
                                     if (elapsedMs >= 100) {
                                         val newSpeed = ((currentBytes - lastBytes) * 1000L) / elapsedMs
@@ -188,15 +267,47 @@ class ModelRunnerManager(
                                         lastSpeed = newSpeed
                                         newSpeed
                                     } else {
-                                        lastSpeed // Keep previous speed
+                                        lastSpeed
                                     }
 
                                 progressHandler.sendProgress(
                                     operationId = operationId,
                                     type = OperationType.LOAD,
                                     status = OperationStatus.PROGRESS,
-                                    progress = progressData.progress.toDouble(),
+                                    progress = progressData.progress.toDouble() * 0.9, // Reserve 10% for loading
                                     speed = speed,
+                                )
+                            }
+                        }
+                    }
+
+                    // Check for cancellation after download
+                    if (cancelledOperations.contains(operationId)) {
+                        return@launch
+                    }
+
+                    // Check memory AFTER download but BEFORE loading
+                    // This ensures we catch memory issues before the SDK crashes
+                    checkMemoryForModel(model, quantization)
+
+                    // Now load the model (it's already downloaded, so this just loads into memory)
+                    val runner =
+                        downloader.loadModel(model, quantization) { progressData ->
+                            if (!cancelledOperations.contains(operationId)) {
+                                // If we downloaded, progress is 90-100%, otherwise use full range
+                                val adjustedProgress =
+                                    if (!alreadyDownloaded) {
+                                        0.9 + (progressData.progress.toDouble() * 0.1)
+                                    } else {
+                                        progressData.progress.toDouble()
+                                    }
+
+                                progressHandler.sendProgress(
+                                    operationId = operationId,
+                                    type = OperationType.LOAD,
+                                    status = OperationStatus.PROGRESS,
+                                    progress = adjustedProgress,
+                                    speed = 0L, // Speed not relevant for loading phase
                                 )
                             }
                         }
@@ -208,6 +319,15 @@ class ModelRunnerManager(
 
                     val runnerId = UUID.randomUUID().toString()
                     runners[runnerId] = runner
+
+                    // Track the loaded model info for hot-reload recovery
+                    currentLoadedModelInfo =
+                        LoadedModelInfo(
+                            runnerId = runnerId,
+                            model = model,
+                            quantization = quantization,
+                            path = null,
+                        )
 
                     progressHandler.sendProgress(
                         operationId = operationId,
@@ -225,6 +345,7 @@ class ModelRunnerManager(
                             type = OperationType.LOAD,
                             status = OperationStatus.ERROR,
                             error = e.message ?: "Load failed",
+                            errorCode = parseErrorCode(e),
                         )
                     }
                     activeTasks.remove(operationId)
@@ -273,14 +394,67 @@ class ModelRunnerManager(
         val runner = runners.remove(runnerId) ?: return false
         runner.unload()
 
+        // Clear the loaded model info if this was the current model
+        if (currentLoadedModelInfo?.runnerId == runnerId) {
+            currentLoadedModelInfo = null
+        }
+
         // Request garbage collection to help release native memory
         System.gc()
 
-        // Wait for system to fully release memory
-        // Native memory deallocation can be deferred by the system
-        delay(500)
+        // Wait for system to fully release memory.
+        // Native memory deallocation can be deferred by the system,
+        // especially for larger models. Using 3 seconds to ensure cleanup.
+        delay(3000)
 
         return true
+    }
+
+    // MARK: - Force Unload All
+
+    // / Force unloads all models and clears all state.
+    // / Use this when the native state might be inconsistent.
+    suspend fun forceUnloadAll() {
+        // Unload all runners
+        for ((_, runner) in runners) {
+            runner.unload()
+        }
+        runners.clear()
+
+        // Clear all state
+        currentLoadedModelInfo = null
+
+        // Cancel all active tasks
+        for ((_, job) in activeTasks) {
+            job.cancel()
+        }
+        activeTasks.clear()
+        cancelledOperations.clear()
+
+        // Request garbage collection
+        System.gc()
+
+        // Wait for memory cleanup
+        delay(3000)
+    }
+
+    // MARK: - Get Loaded Model Info
+
+    // / Returns info about the currently loaded model, or null if no model is loaded.
+    // / This is used for syncing Dart state with native state after hot-reload.
+    fun getLoadedModelInfo(): Map<String, Any?>? {
+        val info = currentLoadedModelInfo ?: return null
+        // Verify the runner still exists
+        if (!runners.containsKey(info.runnerId)) {
+            currentLoadedModelInfo = null
+            return null
+        }
+        return mapOf(
+            "runnerId" to info.runnerId,
+            "model" to info.model,
+            "quantization" to info.quantization,
+            "path" to info.path,
+        )
     }
 
     // MARK: - Query Status
@@ -349,5 +523,6 @@ class ModelRunnerManager(
         runners.clear()
         activeTasks.clear()
         cancelledOperations.clear()
+        currentLoadedModelInfo = null
     }
 }

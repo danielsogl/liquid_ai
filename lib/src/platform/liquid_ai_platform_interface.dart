@@ -53,6 +53,26 @@ abstract class LiquidAiPlatform extends PlatformInterface {
   /// Unloads a model runner.
   Future<bool> unloadModel(String runnerId);
 
+  /// Gets information about the currently loaded model.
+  ///
+  /// Returns a map with model info if a model is loaded, or null if no model
+  /// is currently loaded. This is useful for syncing Dart state with native
+  /// state after hot-reload.
+  ///
+  /// The returned map contains:
+  /// - `runnerId`: The unique identifier for the runner
+  /// - `model`: The model slug (null if loaded from path)
+  /// - `quantization`: The quantization slug (null if loaded from path)
+  /// - `path`: The file path (null if loaded from catalog)
+  Future<Map<String, dynamic>?> getLoadedModelInfo();
+
+  /// Force unloads all models and clears all native state.
+  ///
+  /// Use this when the native state might be inconsistent or when
+  /// recovering from errors. This is a destructive operation that
+  /// will unload any loaded model and clear all caches.
+  Future<void> forceUnloadAll();
+
   /// Checks if a model is downloaded.
   Future<bool> isModelDownloaded(String model, String quantization);
 

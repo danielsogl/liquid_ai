@@ -11,6 +11,12 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   /// Stores the model runners.
   final Map<String, bool> runners = {};
 
+  /// Stores info about loaded models (runnerId -> info).
+  final Map<String, Map<String, dynamic>> _loadedModelInfo = {};
+
+  /// The currently loaded runner ID (only one model at a time in real usage).
+  String? _currentRunnerId;
+
   /// The progress stream controller.
   late StreamController<Map<String, dynamic>> _progressController;
 
@@ -208,6 +214,15 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
 
     runners[runnerId] = true;
 
+    // Track loaded model info for path-loaded models
+    _loadedModelInfo[runnerId] = {
+      'runnerId': runnerId,
+      'model': null,
+      'quantization': null,
+      'path': path,
+    };
+    _currentRunnerId = runnerId;
+
     _safeAdd({
       'operationId': operationId,
       'type': 'load',
@@ -267,6 +282,16 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
     downloadedModels[key] = true;
     runners[runnerId] = true;
 
+    // Track loaded model info
+    final parts = key.split(':');
+    _loadedModelInfo[runnerId] = {
+      'runnerId': runnerId,
+      'model': parts[0],
+      'quantization': parts[1],
+      'path': null,
+    };
+    _currentRunnerId = runnerId;
+
     _safeAdd({
       'operationId': operationId,
       'type': 'load',
@@ -280,7 +305,27 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   Future<bool> unloadModel(String runnerId) async {
     final existed = runners.containsKey(runnerId);
     runners.remove(runnerId);
+    _loadedModelInfo.remove(runnerId);
+    if (_currentRunnerId == runnerId) {
+      _currentRunnerId = null;
+    }
     return existed;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getLoadedModelInfo() async {
+    if (_currentRunnerId == null) {
+      return null;
+    }
+    return _loadedModelInfo[_currentRunnerId];
+  }
+
+  @override
+  Future<void> forceUnloadAll() async {
+    runners.clear();
+    _loadedModelInfo.clear();
+    _currentRunnerId = null;
+    _cancelledOperations.clear();
   }
 
   @override
@@ -546,6 +591,8 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   void reset() {
     downloadedModels.clear();
     runners.clear();
+    _loadedModelInfo.clear();
+    _currentRunnerId = null;
     _cancelledOperations.clear();
     _cancelledGenerations.clear();
     conversationHistory.clear();

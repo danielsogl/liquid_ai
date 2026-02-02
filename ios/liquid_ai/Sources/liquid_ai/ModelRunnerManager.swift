@@ -1,7 +1,72 @@
+import Darwin
 import Foundation
 import LeapModelDownloader
 import LeapSDK
 import Metal
+
+/// Error thrown when there's not enough memory to load a model.
+struct InsufficientMemoryError: Error, LocalizedError {
+    let required: UInt64
+    let available: UInt64
+
+    var errorDescription: String? {
+        let requiredMB = required / (1024 * 1024)
+        let availableMB = available / (1024 * 1024)
+        return "Insufficient memory to load model. Required: ~\(requiredMB)MB, Available: ~\(availableMB)MB"
+    }
+}
+
+/// Gets the available memory on the device.
+/// Returns the number of bytes available.
+func getAvailableMemory() -> UInt64 {
+    // Use os_proc_available_memory for iOS 13+
+    // Cast to UInt64 since os_proc_available_memory returns Int on some platforms
+    UInt64(os_proc_available_memory())
+}
+
+/// Estimates the memory required for a model based on file size.
+/// Models typically need 1.2-1.5x their file size when loaded.
+func estimateRequiredMemory(for url: URL) -> UInt64? {
+    guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+          let fileSize = attrs[.size] as? UInt64 else
+    {
+        return nil
+    }
+    // Estimate 1.5x file size for model loading overhead
+    return UInt64(Double(fileSize) * 1.5)
+}
+
+/// Checks if there's enough memory to load a model.
+/// Throws InsufficientMemoryError if not.
+func checkMemoryForModel(url: URL, minHeadroomMB: UInt64 = 200) throws {
+    let available = getAvailableMemory()
+
+    // Check if we can estimate the required memory
+    if let required = estimateRequiredMemory(for: url) {
+        // Add minimum headroom (200MB by default) for system stability
+        let headroom = minHeadroomMB * 1024 * 1024
+        let totalRequired = required + headroom
+
+        if available < totalRequired {
+            throw InsufficientMemoryError(required: required, available: available)
+        }
+    } else {
+        // If we can't determine file size, at least check for minimum available
+        // (500MB minimum for any model)
+        let minRequired: UInt64 = 500 * 1024 * 1024
+        if available < minRequired {
+            throw InsufficientMemoryError(required: minRequired, available: available)
+        }
+    }
+}
+
+/// Info about a loaded model for state recovery after hot-reload.
+struct LoadedModelInfo {
+    let runnerId: String
+    let model: String?
+    let quantization: String?
+    let path: String?
+}
 
 /// Manages model runners and download operations.
 actor ModelRunnerManager {
@@ -22,6 +87,9 @@ actor ModelRunnerManager {
 
     /// Progress handler for streaming events to Flutter.
     private let progressHandler: DownloadProgressHandler
+
+    /// Info about the currently loaded model (for hot-reload recovery).
+    private var currentLoadedModelInfo: LoadedModelInfo?
 
     init(progressHandler: DownloadProgressHandler) {
         self.progressHandler = progressHandler
@@ -96,7 +164,8 @@ actor ModelRunnerManager {
                         operationId: operationId,
                         type: .download,
                         status: .error,
-                        error: error.localizedDescription
+                        error: error.localizedDescription,
+                        errorCode: parseErrorCode(from: error)
                     )
                 }
                 await removeTask(operationId)
@@ -156,32 +225,44 @@ actor ModelRunnerManager {
                 }
 
                 if let manifest {
+                    // Check memory before loading
+                    try checkMemoryForModel(url: manifest.localModelURL)
+
                     // Load from local URL using the downloaded manifest
                     runner = try await Leap.load(url: manifest.localModelURL)
                 } else {
-                    // Fall back to downloading and loading via Leap.load
-                    runner = try await Leap.load(
-                        model: model,
-                        quantization: quantization,
-                        downloadProgressHandler: { [weak self] progress, speed in
-                            guard let self else {
-                                return
-                            }
+                    // Download the model first, then check memory, then load
+                    // This ensures we can check memory AFTER download but BEFORE loading
+                    let downloadedManifest = try await downloader.downloadModel(
+                        model,
+                        quantization: quantization
+                    ) { [weak self] progress, speed in
+                        guard let self else {
+                            return
+                        }
 
-                            Task {
-                                let isCancelled = await self.isOperationCancelled(operationId)
-                                if !isCancelled {
-                                    self.progressHandler.sendProgress(
-                                        operationId: operationId,
-                                        type: .load,
-                                        status: .progress,
-                                        progress: progress,
-                                        speed: speed
-                                    )
-                                }
+                        Task {
+                            let isCancelled = await self.isOperationCancelled(operationId)
+                            if !isCancelled {
+                                self.progressHandler.sendProgress(
+                                    operationId: operationId,
+                                    type: .load,
+                                    status: .progress,
+                                    progress: progress * 0.9, // Reserve 10% for loading phase
+                                    speed: speed
+                                )
                             }
                         }
-                    )
+                    }
+
+                    // Store manifest for future use
+                    await storeManifest(key, manifest: downloadedManifest)
+
+                    // Check memory AFTER download but BEFORE loading
+                    try checkMemoryForModel(url: downloadedManifest.localModelURL)
+
+                    // Now load the model
+                    runner = try await Leap.load(url: downloadedManifest.localModelURL)
                 }
 
                 let isCancelled = await isOperationCancelled(operationId)
@@ -192,6 +273,14 @@ actor ModelRunnerManager {
 
                 let runnerId = UUID().uuidString
                 await storeRunner(runnerId, runner: runner)
+
+                // Track the loaded model info for hot-reload recovery
+                await storeLoadedModelInfo(LoadedModelInfo(
+                    runnerId: runnerId,
+                    model: model,
+                    quantization: quantization,
+                    path: nil
+                ))
 
                 progressHandler.sendProgress(
                     operationId: operationId,
@@ -217,7 +306,8 @@ actor ModelRunnerManager {
                         operationId: operationId,
                         type: .load,
                         status: .error,
-                        error: errorMessage
+                        error: errorMessage,
+                        errorCode: parseErrorCode(from: error)
                     )
                 }
                 await removeTask(operationId)
@@ -256,11 +346,15 @@ actor ModelRunnerManager {
                         operationId: operationId,
                         type: .load,
                         status: .error,
-                        error: "Model file not found at path: \(path)"
+                        error: "Model file not found at path: \(path)",
+                        errorCode: .modelNotFound
                     )
                     await removeTask(operationId)
                     return
                 }
+
+                // Check memory before loading
+                try checkMemoryForModel(url: fileURL)
 
                 progressHandler.sendProgress(
                     operationId: operationId,
@@ -280,6 +374,14 @@ actor ModelRunnerManager {
                 let runnerId = UUID().uuidString
                 await storeRunner(runnerId, runner: runner)
 
+                // Track the loaded model info for hot-reload recovery
+                await storeLoadedModelInfo(LoadedModelInfo(
+                    runnerId: runnerId,
+                    model: nil,
+                    quantization: nil,
+                    path: path
+                ))
+
                 progressHandler.sendProgress(
                     operationId: operationId,
                     type: .load,
@@ -297,7 +399,8 @@ actor ModelRunnerManager {
                         operationId: operationId,
                         type: .load,
                         status: .error,
-                        error: error.localizedDescription
+                        error: error.localizedDescription,
+                        errorCode: parseErrorCode(from: error)
                     )
                 }
                 await removeTask(operationId)
@@ -322,6 +425,11 @@ actor ModelRunnerManager {
 
         print("[LiquidAI] unloadModel: Starting unload for runner \(runnerId)")
 
+        // Clear the loaded model info if this was the current model
+        if currentLoadedModelInfo?.runnerId == runnerId {
+            currentLoadedModelInfo = nil
+        }
+
         // Unload the model
         await runner.unload()
         print("[LiquidAI] unloadModel: runner.unload() completed")
@@ -339,12 +447,55 @@ actor ModelRunnerManager {
 
         // Wait for system to fully release GPU memory.
         // Metal memory deallocation can be significantly deferred by the system,
-        // especially on memory-constrained devices.
-        print("[LiquidAI] unloadModel: Waiting 1 second for memory cleanup...")
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        // especially on memory-constrained devices. Using 3 seconds to ensure
+        // larger models have time to fully release.
+        print("[LiquidAI] unloadModel: Waiting for memory cleanup...")
+        try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
         print("[LiquidAI] unloadModel: Wait completed, returning")
 
         return true
+    }
+
+    /// Force unloads all models and clears all state.
+    ///
+    /// Use this when the native state might be inconsistent or when
+    /// recovering from errors.
+    func forceUnloadAll() async {
+        print("[LiquidAI] forceUnloadAll: Starting")
+
+        // Copy keys to avoid mutation during iteration
+        let runnerIds = Array(runners.keys)
+
+        for runnerId in runnerIds {
+            if let runner = runners.removeValue(forKey: runnerId) {
+                await runner.unload()
+            }
+        }
+
+        // Clear all state
+        currentLoadedModelInfo = nil
+        downloadedManifests.removeAll()
+
+        // Cancel all active tasks
+        for (_, task) in activeTasks {
+            task.cancel()
+        }
+        activeTasks.removeAll()
+        cancelledOperations.removeAll()
+
+        // Force Metal sync
+        if let device = MTLCreateSystemDefaultDevice() {
+            if let commandQueue = device.makeCommandQueue(),
+               let commandBuffer = commandQueue.makeCommandBuffer()
+            {
+                commandBuffer.commit()
+                commandBuffer.waitUntilCompleted()
+            }
+        }
+
+        // Wait for memory cleanup
+        try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+        print("[LiquidAI] forceUnloadAll: Completed")
     }
 
     // MARK: - Query Status
@@ -392,6 +543,27 @@ actor ModelRunnerManager {
         runners[runnerId]
     }
 
+    // MARK: - Loaded Model Info
+
+    /// Returns info about the currently loaded model, or nil if no model is loaded.
+    /// This is used for syncing Dart state with native state after hot-reload.
+    func getLoadedModelInfo() -> [String: Any?]? {
+        guard let info = currentLoadedModelInfo else {
+            return nil
+        }
+        // Verify the runner still exists
+        guard runners[info.runnerId] != nil else {
+            currentLoadedModelInfo = nil
+            return nil
+        }
+        return [
+            "runnerId": info.runnerId,
+            "model": info.model,
+            "quantization": info.quantization,
+            "path": info.path,
+        ]
+    }
+
     // MARK: - Private Helpers
 
     private func storeRunner(_ runnerId: String, runner: any ModelRunner) {
@@ -412,5 +584,9 @@ actor ModelRunnerManager {
 
     private func isOperationCancelled(_ operationId: String) -> Bool {
         cancelledOperations.contains(operationId)
+    }
+
+    private func storeLoadedModelInfo(_ info: LoadedModelInfo) {
+        currentLoadedModelInfo = info
     }
 }

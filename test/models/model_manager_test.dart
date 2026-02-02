@@ -203,7 +203,7 @@ void main() {
 
     test('initializeForTesting allows mock injection', () async {
       final customLiquidAi = LiquidAi();
-      ModelManager.initializeForTesting(customLiquidAi);
+      ModelManager.initializeForTesting(liquidAi: customLiquidAi);
 
       final manager = ModelManager.instance;
 

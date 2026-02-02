@@ -67,6 +67,19 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
   }
 
   @override
+  Future<Map<String, dynamic>?> getLoadedModelInfo() async {
+    final result = await methodChannel.invokeMapMethod<String, dynamic>(
+      'getLoadedModelInfo',
+    );
+    return result;
+  }
+
+  @override
+  Future<void> forceUnloadAll() async {
+    await methodChannel.invokeMethod<void>('forceUnloadAll');
+  }
+
+  @override
   Future<bool> isModelDownloaded(String model, String quantization) async {
     final isDownloaded = await methodChannel.invokeMethod<bool>(
       'isModelDownloaded',

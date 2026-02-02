@@ -26,7 +26,7 @@ class ModelListItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(context, modelState),
+                  _buildHeader(context, modelState, state),
                   const SizedBox(height: 8),
                   _buildDescription(context),
                   const SizedBox(height: 8),
@@ -50,7 +50,11 @@ class ModelListItem extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, ModelState modelState) {
+  Widget _buildHeader(
+    BuildContext context,
+    ModelState modelState,
+    DownloadState state,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -96,7 +100,7 @@ class ModelListItem extends StatelessWidget {
             ],
           ),
         ),
-        _buildStatusIcon(context, modelState),
+        _buildStatusIcon(context, modelState, state),
       ],
     );
   }
@@ -214,12 +218,40 @@ class ModelListItem extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusIcon(BuildContext context, ModelState modelState) {
+  Widget _buildStatusIcon(
+    BuildContext context,
+    ModelState modelState,
+    DownloadState state,
+  ) {
+    final isLoaded = state.currentModelSlug == model.slug;
+
     switch (modelState.status) {
       case ModelDownloadStatus.downloaded:
-        return Icon(
-          Icons.check_circle,
-          color: Theme.of(context).colorScheme.primary,
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isLoaded) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Loaded',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onTertiaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ],
         );
       case ModelDownloadStatus.downloading:
         return SizedBox(
@@ -271,14 +303,32 @@ class ModelListItem extends StatelessWidget {
           label: const Text('Cancel'),
         );
       case ModelDownloadStatus.downloaded:
-        return Row(
+        final isLoaded = state.currentModelSlug == model.slug;
+        final isUnloading = state.isLoading && state.loadingModelSlug == null;
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
+            if (isLoaded)
+              FilledButton.tonalIcon(
+                onPressed: isUnloading ? null : () => state.unloadModel(),
+                icon: isUnloading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.eject),
+                label: Text(isUnloading ? 'Unloading...' : 'Unload'),
+              ),
             OutlinedButton.icon(
-              onPressed: () => _showDeleteDialog(context, state),
+              onPressed: isLoaded
+                  ? null
+                  : () => _showDeleteDialog(context, state),
               icon: const Icon(Icons.delete_outline),
               label: const Text('Delete'),
             ),
-            const SizedBox(width: 8),
             OutlinedButton.icon(
               onPressed: () =>
                   _showQuantizationPicker(context, state, modelState),

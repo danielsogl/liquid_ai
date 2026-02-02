@@ -64,6 +64,14 @@ class LiquidAiPlugin :
                 handleUnloadModel(call, result)
             }
 
+            "getLoadedModelInfo" -> {
+                handleGetLoadedModelInfo(result)
+            }
+
+            "forceUnloadAll" -> {
+                handleForceUnloadAll(result)
+            }
+
             "isModelDownloaded" -> {
                 handleIsModelDownloaded(call, result)
             }
@@ -244,6 +252,20 @@ class LiquidAiPlugin :
                     modelManager.unloadModel(runnerId)
                 }
             result.success(success)
+        }
+    }
+
+    private fun handleGetLoadedModelInfo(result: Result) {
+        val info = modelManager.getLoadedModelInfo()
+        result.success(info)
+    }
+
+    private fun handleForceUnloadAll(result: Result) {
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                modelManager.forceUnloadAll()
+            }
+            result.success(null)
         }
     }
 

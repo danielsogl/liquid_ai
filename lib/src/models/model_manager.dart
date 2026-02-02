@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../liquid_ai.dart';
+import '../platform/liquid_ai_platform_interface.dart';
 import 'load_event.dart';
 import 'load_options.dart';
 import 'model_runner.dart';
@@ -26,7 +27,9 @@ import 'model_runner.dart';
 /// await manager.unloadCurrentModel();
 /// ```
 class ModelManager {
-  ModelManager._({LiquidAi? liquidAi}) : _liquidAi = liquidAi ?? LiquidAi();
+  ModelManager._({LiquidAi? liquidAi, LiquidAiPlatform? platform})
+    : _liquidAi = liquidAi ?? LiquidAi(),
+      _platform = platform ?? LiquidAiPlatform.instance;
 
   static ModelManager? _instance;
 
@@ -43,14 +46,18 @@ class ModelManager {
     _instance = null;
   }
 
-  /// Creates a [ModelManager] for testing with a custom [LiquidAi] instance.
+  /// Creates a [ModelManager] for testing with custom dependencies.
   ///
-  /// This allows injecting a mock [LiquidAi] for unit testing.
-  static void initializeForTesting(LiquidAi liquidAi) {
-    _instance = ModelManager._(liquidAi: liquidAi);
+  /// This allows injecting mock [LiquidAi] and [LiquidAiPlatform] for testing.
+  static void initializeForTesting({
+    LiquidAi? liquidAi,
+    LiquidAiPlatform? platform,
+  }) {
+    _instance = ModelManager._(liquidAi: liquidAi, platform: platform);
   }
 
   final LiquidAi _liquidAi;
+  final LiquidAiPlatform _platform;
 
   /// The currently loaded model runner, if any.
   ModelRunner? _currentRunner;
@@ -67,11 +74,65 @@ class ModelManager {
   /// Whether a model load operation is in progress.
   bool get isLoading => _isLoading;
 
-  /// The model slug of the currently loaded model, or null if none.
+  /// The model slug of the currently loaded model.
+  ///
+  /// Returns null if no model is loaded or if the model was loaded from path.
   String? get currentModelSlug => _currentRunner?.model;
 
-  /// The quantization of the currently loaded model, or null if none.
+  /// The quantization of the currently loaded model.
+  ///
+  /// Returns null if no model is loaded or if the model was loaded from path.
   String? get currentQuantization => _currentRunner?.quantization;
+
+  /// The file path of the currently loaded model.
+  ///
+  /// Returns null if no model is loaded or if the model was loaded from
+  /// catalog.
+  String? get currentPath => _currentRunner?.path;
+
+  /// Whether the currently loaded model was loaded from a local file path.
+  bool get isCurrentModelPathLoaded => _currentRunner?.isPathLoaded ?? false;
+
+  /// Syncs Dart state with native state.
+  ///
+  /// Call this after hot-reload or on app initialization to recover the
+  /// currently loaded model state from the native layer. During hot-reload,
+  /// Dart state is reset but native state persists, which can lead to
+  /// memory leaks and inconsistent state.
+  ///
+  /// Example:
+  /// ```dart
+  /// // In your app initialization or after hot-reload
+  /// await ModelManager.instance.syncWithNative();
+  ///
+  /// if (ModelManager.instance.hasLoadedModel) {
+  ///   // Model was recovered from native state
+  ///   final runner = ModelManager.instance.currentRunner!;
+  /// }
+  /// ```
+  ///
+  /// Returns true if a model was found and synced, false if no model was
+  /// loaded on the native side.
+  Future<bool> syncWithNative() async {
+    if (_isLoading) {
+      throw StateError('Cannot sync while a load operation is in progress.');
+    }
+
+    final loadedInfo = await _platform.getLoadedModelInfo();
+
+    if (loadedInfo == null) {
+      // No model loaded on native side, clear Dart state
+      _currentRunner = null;
+      return false;
+    }
+
+    // Reconstruct the ModelRunner from native state
+    _currentRunner = ModelRunner.fromNativeInfo(
+      loadedInfo,
+      platform: _platform,
+    );
+    return true;
+  }
 
   /// Loads a model, automatically unloading any previously loaded model first.
   ///
@@ -128,7 +189,11 @@ class ModelManager {
         _isLoading = true;
 
         // Unload the current model first to free memory
-        await _unloadCurrentModelInternal();
+        try {
+          await _unloadCurrentModelInternal();
+        } catch (_) {
+          // If unload fails, still try to load (best effort cleanup)
+        }
 
         // Now load the new model
         subscription = _liquidAi
@@ -219,6 +284,134 @@ class ModelManager {
     return completer.future;
   }
 
+  /// Loads a model from a local file path, automatically unloading any
+  /// previously loaded model first.
+  ///
+  /// This is useful for loading models bundled with the app or downloaded
+  /// to a custom location.
+  ///
+  /// The [path] must be an absolute path to a valid model file (e.g., .gguf).
+  ///
+  /// The optional [options] parameter allows configuring inference engine
+  /// settings like context size, batch size, and GPU acceleration.
+  ///
+  /// Returns a stream of [LoadEvent] objects indicating progress.
+  ///
+  /// Throws [StateError] if a load operation is already in progress.
+  Stream<LoadEvent> loadModelFromPath(String path, {LoadOptions? options}) {
+    if (_isLoading) {
+      throw StateError(
+        'A model load operation is already in progress. '
+        'Wait for it to complete before loading another model.',
+      );
+    }
+
+    late StreamController<LoadEvent> controller;
+    StreamSubscription<LoadEvent>? subscription;
+    var isClosed = false;
+
+    void safeAdd(LoadEvent event) {
+      if (!isClosed) {
+        controller.add(event);
+      }
+    }
+
+    void safeClose() {
+      if (!isClosed) {
+        isClosed = true;
+        _isLoading = false;
+        controller.close();
+      }
+    }
+
+    controller = StreamController<LoadEvent>(
+      onListen: () async {
+        _isLoading = true;
+
+        // Unload the current model first to free memory
+        try {
+          await _unloadCurrentModelInternal();
+        } catch (_) {
+          // If unload fails, still try to load (best effort cleanup)
+        }
+
+        // Now load the new model from path
+        subscription = _liquidAi
+            .loadModelFromPath(path, options: options)
+            .listen(
+              (event) {
+                safeAdd(event);
+
+                if (event is LoadCompleteEvent) {
+                  _currentRunner = event.runner;
+                  safeClose();
+                } else if (event is LoadErrorEvent ||
+                    event is LoadCancelledEvent) {
+                  _currentRunner = null;
+                  safeClose();
+                }
+              },
+              onError: (error) {
+                _currentRunner = null;
+                if (!isClosed) {
+                  controller.addError(error);
+                }
+                safeClose();
+              },
+              onDone: safeClose,
+            );
+      },
+      onCancel: () {
+        isClosed = true;
+        _isLoading = false;
+        subscription?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  /// Loads a model from a local file path and returns the [ModelRunner].
+  ///
+  /// This is a convenience method that wraps [loadModelFromPath] and returns
+  /// the final [ModelRunner] or null if loading failed.
+  Future<ModelRunner?> loadModelFromPathAsync(
+    String path, {
+    LoadOptions? options,
+  }) async {
+    final completer = Completer<ModelRunner?>();
+    StreamSubscription<LoadEvent>? subscription;
+
+    subscription = loadModelFromPath(path, options: options).listen(
+      (event) {
+        if (event is LoadCompleteEvent) {
+          if (!completer.isCompleted) {
+            completer.complete(event.runner);
+          }
+          subscription?.cancel();
+        } else if (event is LoadErrorEvent || event is LoadCancelledEvent) {
+          if (!completer.isCompleted) {
+            completer.complete(null);
+          }
+          subscription?.cancel();
+        }
+      },
+      onError: (error) {
+        if (!completer.isCompleted) {
+          completer.complete(null);
+        }
+        subscription?.cancel();
+      },
+      onDone: () {
+        if (!completer.isCompleted) {
+          completer.complete(null);
+        }
+      },
+    );
+
+    return completer.future;
+  }
+
   /// Unloads the currently loaded model, freeing its memory.
   ///
   /// This is safe to call even if no model is loaded. After calling this,
@@ -230,6 +423,26 @@ class ModelManager {
       throw StateError('Cannot unload while a load operation is in progress.');
     }
     await _unloadCurrentModelInternal();
+  }
+
+  /// Force unloads all models and clears all native state.
+  ///
+  /// Use this when the native state might be inconsistent or when recovering
+  /// from errors. This is a destructive operation that will unload any loaded
+  /// model and clear all caches.
+  ///
+  /// After calling this, [currentRunner] will be null and [hasLoadedModel]
+  /// will be false.
+  ///
+  /// Throws [StateError] if a load operation is in progress.
+  Future<void> forceUnloadAll() async {
+    if (_isLoading) {
+      throw StateError(
+        'Cannot force unload while a load operation is in progress.',
+      );
+    }
+    _currentRunner = null;
+    await _platform.forceUnloadAll();
   }
 
   /// Internal method to unload the current model.
@@ -245,12 +458,19 @@ class ModelManager {
     }
   }
 
-  /// Checks if a specific model is currently loaded.
+  /// Checks if a specific catalog model is currently loaded.
   ///
   /// Returns true if a model is loaded and matches both the [model] slug
-  /// and [quantization].
+  /// and [quantization]. Returns false for path-loaded models.
   bool isModelLoaded(String model, String quantization) {
     return _currentRunner?.model == model &&
         _currentRunner?.quantization == quantization;
+  }
+
+  /// Checks if a model from a specific path is currently loaded.
+  ///
+  /// Returns true if a model is loaded from the given [path].
+  bool isPathLoaded(String path) {
+    return _currentRunner?.path == path;
   }
 }

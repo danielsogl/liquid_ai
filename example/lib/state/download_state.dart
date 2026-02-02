@@ -98,6 +98,18 @@ class DownloadState extends ChangeNotifier {
   /// Whether a model is currently being loaded.
   bool get isLoading => _loadStatus == ModelLoadStatus.loading;
 
+  /// Whether a model is currently loaded.
+  bool get isModelLoaded => _modelManager.hasLoadedModel;
+
+  /// The currently loaded model runner, or null if none.
+  ModelRunner? get currentRunner => _modelManager.currentRunner;
+
+  /// The slug of the currently loaded model (null if loaded from path).
+  String? get currentModelSlug => _modelManager.currentModelSlug;
+
+  /// The quantization of the currently loaded model (null if loaded from path).
+  String? get currentQuantization => _modelManager.currentQuantization;
+
   /// Gets the state for a specific model.
   ModelState getModelState(String modelSlug) {
     return _modelStates[modelSlug] ??
@@ -370,7 +382,18 @@ class DownloadState extends ChangeNotifier {
             subscription?.cancel();
           case LoadErrorEvent():
             _loadStatus = ModelLoadStatus.error;
-            _loadErrorMessage = event.error;
+            // Use the typed exception for better error messages
+            if (event.isMemoryError) {
+              _loadErrorMessage =
+                  'Not enough memory. Try a smaller model or close other apps.';
+            } else if (event.isInterrupted) {
+              _loadErrorMessage = 'Operation was interrupted.';
+            } else if (event.isNetworkError) {
+              _loadErrorMessage =
+                  'Network error. Check your internet connection.';
+            } else {
+              _loadErrorMessage = event.error;
+            }
             _loadingModelSlug = null;
             notifyListeners();
             if (!completer.isCompleted) {
@@ -400,6 +423,67 @@ class DownloadState extends ChangeNotifier {
     );
 
     return completer.future;
+  }
+
+  /// Unloads the currently loaded model, freeing its memory.
+  ///
+  /// This is safe to call even if no model is loaded.
+  Future<void> unloadModel() async {
+    if (_loadStatus == ModelLoadStatus.loading) {
+      return; // Don't unload while loading
+    }
+
+    await _modelManager.unloadCurrentModel();
+    _loadStatus = ModelLoadStatus.notLoaded;
+    _loadingModelSlug = null;
+    _loadErrorMessage = null;
+    notifyListeners();
+  }
+
+  /// Force unloads all models and clears all native state.
+  ///
+  /// Use this when experiencing memory issues or inconsistent state.
+  /// This is a destructive operation that will unload any loaded model.
+  Future<void> forceUnloadAll() async {
+    if (_loadStatus == ModelLoadStatus.loading) {
+      return; // Don't unload while loading
+    }
+
+    try {
+      await _modelManager.forceUnloadAll();
+    } catch (_) {
+      // Best effort - continue even if error
+    }
+    _loadStatus = ModelLoadStatus.notLoaded;
+    _loadingModelSlug = null;
+    _loadErrorMessage = null;
+    notifyListeners();
+  }
+
+  /// Syncs Dart state with native state.
+  ///
+  /// Call this after hot-reload to recover any loaded model state.
+  /// Returns true if a model was recovered.
+  Future<bool> syncWithNative() async {
+    if (_loadStatus == ModelLoadStatus.loading) {
+      return false;
+    }
+
+    try {
+      final wasModelLoaded = await _modelManager.syncWithNative();
+      if (wasModelLoaded) {
+        _loadStatus = ModelLoadStatus.loaded;
+        _loadingModelSlug = null;
+        _loadErrorMessage = null;
+        notifyListeners();
+      }
+      return wasModelLoaded;
+    } catch (e) {
+      // If sync fails, clear the state
+      _loadStatus = ModelLoadStatus.notLoaded;
+      notifyListeners();
+      return false;
+    }
   }
 
   @override
