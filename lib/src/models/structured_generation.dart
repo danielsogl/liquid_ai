@@ -227,36 +227,4 @@ class JsonCleaner {
 
     return result.trim();
   }
-
-  /// Attempts to parse JSON, cleaning markdown if needed.
-  ///
-  /// Returns the parsed object or throws a [FormatException].
-  /// @Deprecated: Use [extractJson] instead for better extraction.
-  static Map<String, dynamic> parseJson(String text) {
-    return extractJson(text);
-  }
-
-  /// Strips markdown code blocks from a JSON string.
-  ///
-  /// Handles formats like:
-  /// - ```json ... ```
-  /// - ``` ... ```
-  @Deprecated('Use extractJson instead for more robust parsing')
-  static String stripMarkdownCodeBlocks(String text) {
-    var cleaned = text.trim();
-
-    // Handle ```json prefix
-    if (cleaned.startsWith('```json')) {
-      cleaned = cleaned.substring(7);
-    } else if (cleaned.startsWith('```')) {
-      cleaned = cleaned.substring(3);
-    }
-
-    // Handle ``` suffix
-    if (cleaned.endsWith('```')) {
-      cleaned = cleaned.substring(0, cleaned.length - 3);
-    }
-
-    return cleaned.trim();
-  }
 }
