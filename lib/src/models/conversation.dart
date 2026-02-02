@@ -306,7 +306,7 @@ class Conversation {
   /// the prompt doesn't exceed the model's context window.
   ///
   /// Note: This feature is only available on iOS. On Android, this will
-  /// throw a [PlatformException] with code 'UNSUPPORTED'.
+  /// throw a `PlatformException` with code 'UNSUPPORTED'.
   ///
   /// Example:
   /// ```dart
