@@ -332,4 +332,73 @@ class LiquidAiPluginTest {
         assertEquals("UNSUPPORTED", result.errorCode)
         assertTrue(result.errorMessage?.contains("not supported on Android") == true)
     }
+
+    // MARK: - Cache Management Tests
+
+    @Test
+    fun `getCachedModels returns error when not attached`() {
+        val call = MethodCall("getCachedModels", null)
+
+        plugin.onMethodCall(call, result)
+
+        // Returns error because plugin is not attached to engine
+        assertEquals("NOT_ATTACHED", result.errorCode)
+    }
+
+    @Test
+    fun `isModelCached returns error for missing modelId`() {
+        val call = MethodCall("isModelCached", null)
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
+    @Test
+    fun `isModelCached returns error for missing modelId argument`() {
+        val call = MethodCall("isModelCached", mapOf("other" to "value"))
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
+    @Test
+    fun `deleteAllModels returns error when not attached`() {
+        val call = MethodCall("deleteAllModels", null)
+
+        plugin.onMethodCall(call, result)
+
+        // Returns error because plugin is not attached to engine
+        assertEquals("NOT_ATTACHED", result.errorCode)
+    }
+
+    // MARK: - URL Download Tests
+
+    @Test
+    fun `downloadModelFromUrl returns error for missing arguments`() {
+        val call = MethodCall("downloadModelFromUrl", null)
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
+    @Test
+    fun `downloadModelFromUrl returns error for missing url`() {
+        val call = MethodCall("downloadModelFromUrl", mapOf("modelId" to "test-model"))
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
+
+    @Test
+    fun `downloadModelFromUrl returns error for missing modelId`() {
+        val call = MethodCall("downloadModelFromUrl", mapOf("url" to "https://example.com/model.gguf"))
+
+        plugin.onMethodCall(call, result)
+
+        assertEquals("INVALID_ARGUMENTS", result.errorCode)
+    }
 }

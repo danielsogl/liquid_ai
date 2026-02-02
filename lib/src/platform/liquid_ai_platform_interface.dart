@@ -41,20 +41,6 @@ abstract class LiquidAiPlatform extends PlatformInterface {
     String quantization = 'custom',
   });
 
-  /// Downloads a split model from multiple URLs and returns the operation ID.
-  ///
-  /// Some vision models require separate files for the language model
-  /// and the multimodal projector. This method downloads all files
-  /// and links them together.
-  ///
-  /// The first URL should be the main language model file.
-  /// Additional URLs can be projector files or other components.
-  Future<String> downloadSplitModel(
-    List<String> urls,
-    String modelId, {
-    String quantization = 'custom',
-  });
-
   /// Loads a model and returns the operation ID.
   ///
   /// The optional [options] parameter allows configuring inference engine
@@ -113,7 +99,7 @@ abstract class LiquidAiPlatform extends PlatformInterface {
   /// Checks if a model with the given [modelId] is cached.
   ///
   /// This is useful for checking models downloaded via [downloadModelFromUrl]
-  /// or [downloadSplitModel] where a custom model ID was specified.
+  /// where a custom model ID was specified.
   Future<bool> isModelCached(String modelId);
 
   /// Deletes all cached models.

@@ -68,6 +68,7 @@ struct LoadedModelInfo {
     let path: String?
 }
 
+// swiftlint:disable type_body_length
 /// Manages model runners and download operations.
 actor ModelRunnerManager {
     /// Active model runners keyed by runner ID.
@@ -518,6 +519,236 @@ actor ModelRunnerManager {
         try downloader.removeModel(model, quantization: quantization)
     }
 
+    // MARK: - Cache Management
+
+    /// Gets all cached models as a list of manifest maps.
+    func getCachedModels() -> [[String: Any?]] {
+        var models: [[String: Any?]] = []
+
+        // Get the app's caches directory where models are stored
+        guard let cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return models
+        }
+
+        let modelsDir = cachesDir.appendingPathComponent("models")
+
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: modelsDir,
+            includingPropertiesForKeys: nil
+        ) else {
+            return models
+        }
+
+        for dir in contents where dir.hasDirectoryPath {
+            // Parse directory name to get model and quantization
+            let name = dir.lastPathComponent
+            let parts = name.split(separator: "-")
+            if parts.count >= 2, let lastPart = parts.last {
+                let quantization = String(lastPart)
+                let model = parts.dropLast().joined(separator: "-")
+
+                models.append([
+                    "modelSlug": model,
+                    "quantizationSlug": quantization,
+                    "localModelPath": dir.path,
+                ])
+            }
+        }
+
+        return models
+    }
+
+    /// Checks if a model with the given ID is cached.
+    func isModelCached(modelId: String) -> Bool {
+        guard let cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return false
+        }
+
+        let modelsDir = cachesDir.appendingPathComponent("models")
+
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: modelsDir,
+            includingPropertiesForKeys: nil
+        ) else {
+            return false
+        }
+
+        return contents.contains { dir in
+            dir.hasDirectoryPath && dir.lastPathComponent.hasPrefix("\(modelId)-")
+        }
+    }
+
+    /// Deletes all cached models.
+    func deleteAllModels() throws {
+        guard let cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            return
+        }
+
+        let modelsDir = cachesDir.appendingPathComponent("models")
+
+        if FileManager.default.fileExists(atPath: modelsDir.path) {
+            let contents = try FileManager.default.contentsOfDirectory(
+                at: modelsDir,
+                includingPropertiesForKeys: nil
+            )
+
+            for item in contents {
+                try FileManager.default.removeItem(at: item)
+            }
+        }
+
+        // Also clear manifest cache
+        downloadedManifests.removeAll()
+    }
+
+    // MARK: - URL Download
+
+    /// Downloads a model from a direct URL (e.g., Hugging Face).
+    func downloadModelFromUrl(
+        url: String,
+        modelId: String,
+        quantization: String
+    ) async
+        -> String
+    {
+        let operationId = UUID().uuidString
+        cancelledOperations.remove(operationId)
+
+        progressHandler.sendProgress(
+            operationId: operationId,
+            type: .download,
+            status: .started
+        )
+
+        let task = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            do {
+                guard let downloadUrl = URL(string: url) else {
+                    progressHandler.sendProgress(
+                        operationId: operationId,
+                        type: .download,
+                        status: .error,
+                        error: "Invalid URL: \(url)",
+                        errorCode: .networkError
+                    )
+                    await removeTask(operationId)
+                    return
+                }
+
+                // Create destination directory using model/quantization structure
+                guard let cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+                    progressHandler.sendProgress(
+                        operationId: operationId,
+                        type: .download,
+                        status: .error,
+                        error: "Could not access caches directory",
+                        errorCode: .internalError
+                    )
+                    await removeTask(operationId)
+                    return
+                }
+
+                let modelsDir = cachesDir.appendingPathComponent("models")
+                let modelDir = modelsDir.appendingPathComponent(modelId).appendingPathComponent(quantization)
+
+                try FileManager.default.createDirectory(at: modelDir, withIntermediateDirectories: true)
+
+                // Determine filename from URL (remove query params)
+                var filename = downloadUrl.lastPathComponent
+                if let queryIndex = filename.firstIndex(of: "?") {
+                    filename = String(filename[..<queryIndex])
+                }
+                if filename.isEmpty {
+                    filename = "model.gguf"
+                }
+                let destinationUrl = modelDir.appendingPathComponent(filename)
+
+                // Check if already downloaded
+                if FileManager.default.fileExists(atPath: destinationUrl.path) {
+                    let attrs = try? FileManager.default.attributesOfItem(atPath: destinationUrl.path)
+                    if let fileSize = attrs?[.size] as? Int64, fileSize > 0 {
+                        progressHandler.sendProgress(
+                            operationId: operationId,
+                            type: .download,
+                            status: .completed,
+                            progress: 1.0
+                        )
+                        await removeTask(operationId)
+                        return
+                    }
+                }
+
+                // Download the file
+                try await downloadFileSimple(
+                    from: downloadUrl,
+                    to: destinationUrl,
+                    operationId: operationId
+                )
+
+                let isCancelled = await isOperationCancelled(operationId)
+                if !isCancelled {
+                    progressHandler.sendProgress(
+                        operationId: operationId,
+                        type: .download,
+                        status: .completed,
+                        progress: 1.0
+                    )
+                }
+
+                await removeTask(operationId)
+
+            } catch {
+                let isCancelled = await isOperationCancelled(operationId)
+                if !isCancelled {
+                    progressHandler.sendProgress(
+                        operationId: operationId,
+                        type: .download,
+                        status: .error,
+                        error: error.localizedDescription,
+                        errorCode: parseErrorCode(from: error)
+                    )
+                }
+                await removeTask(operationId)
+            }
+        }
+
+        activeTasks[operationId] = task
+        return operationId
+    }
+
+    /// Downloads a file from a URL to a local destination using simple download API.
+    private func downloadFileSimple(
+        from url: URL,
+        to destination: URL,
+        operationId _: String
+    ) async throws {
+        // Remove existing file if present
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("LiquidAI-Flutter/1.0", forHTTPHeaderField: "User-Agent")
+
+        let (tempURL, response) = try await URLSession.shared.download(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200 ... 299).contains(httpResponse.statusCode) else
+        {
+            throw NSError(
+                domain: "ModelDownload",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "HTTP error: \((response as? HTTPURLResponse)?.statusCode ?? -1)"]
+            )
+        }
+
+        // Move temp file to final location
+        try FileManager.default.moveItem(at: tempURL, to: destination)
+    }
+
     // MARK: - Cancel Operation
 
     /// Cancels an ongoing download or load operation.
@@ -590,3 +821,5 @@ actor ModelRunnerManager {
         currentLoadedModelInfo = info
     }
 }
+
+// swiftlint:enable type_body_length

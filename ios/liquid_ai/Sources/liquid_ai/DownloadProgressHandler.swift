@@ -100,6 +100,7 @@ enum ErrorCode: String {
     case requestInterrupted = "REQUEST_INTERRUPTED"
     case modelLoadingFailure = "MODEL_LOADING_FAILURE"
     case internalError = "INTERNAL_ERROR"
+    case notImplemented = "NOT_IMPLEMENTED"
     case unknown = "UNKNOWN"
 }
 

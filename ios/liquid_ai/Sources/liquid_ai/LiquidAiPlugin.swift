@@ -27,6 +27,10 @@ public class LiquidAiPlugin: NSObject, FlutterPlugin {
         "forceUnloadAll": handleForceUnloadAll,
         "isModelDownloaded": handleIsModelDownloaded,
         "deleteModel": handleDeleteModel,
+        "getCachedModels": handleGetCachedModels,
+        "isModelCached": handleIsModelCached,
+        "deleteAllModels": handleDeleteAllModels,
+        "downloadModelFromUrl": handleDownloadModelFromUrl,
         "cancelOperation": handleCancelOperation,
         "getModelStatus": handleGetModelStatus,
         "createConversation": handleCreateConversation,
@@ -283,6 +287,82 @@ extension LiquidAiPlugin {
             }
         }
     }
+
+    func handleGetCachedModels(_: FlutterMethodCall, result: @escaping FlutterResult) {
+        Task {
+            let models = await modelManager.getCachedModels()
+            DispatchQueue.main.async {
+                result(models)
+            }
+        }
+    }
+
+    func handleIsModelCached(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let modelId = args["modelId"] as? String else
+        {
+            result(FlutterError(
+                code: "INVALID_ARGUMENTS",
+                message: "Missing required argument: modelId",
+                details: nil
+            ))
+            return
+        }
+
+        Task {
+            let isCached = await modelManager.isModelCached(modelId: modelId)
+            DispatchQueue.main.async {
+                result(isCached)
+            }
+        }
+    }
+
+    func handleDeleteAllModels(_: FlutterMethodCall, result: @escaping FlutterResult) {
+        Task {
+            do {
+                try await modelManager.deleteAllModels()
+                DispatchQueue.main.async {
+                    result(nil)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    result(FlutterError(
+                        code: "DELETE_FAILED",
+                        message: error.localizedDescription,
+                        details: nil
+                    ))
+                }
+            }
+        }
+    }
+
+    func handleDownloadModelFromUrl(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let url = args["url"] as? String,
+              let modelId = args["modelId"] as? String else
+        {
+            result(FlutterError(
+                code: "INVALID_ARGUMENTS",
+                message: "Missing required arguments: url, modelId",
+                details: nil
+            ))
+            return
+        }
+
+        let quantization = args["quantization"] as? String ?? "custom"
+
+        Task {
+            let operationId = await modelManager.downloadModelFromUrl(
+                url: url,
+                modelId: modelId,
+                quantization: quantization
+            )
+            DispatchQueue.main.async {
+                result(operationId)
+            }
+        }
+    }
+
 }
 
 // MARK: - Conversation Handlers

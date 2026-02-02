@@ -384,21 +384,6 @@ class MockLiquidAiPlatform extends LiquidAiPlatform {
   }
 
   @override
-  Future<String> downloadSplitModel(
-    List<String> urls,
-    String modelId, {
-    String quantization = 'custom',
-  }) async {
-    final operationId = 'op_${++_operationCounter}';
-    final key = '$modelId:$quantization';
-
-    // Schedule events to be emitted after the method returns
-    unawaited(_emitDownloadEvents(operationId, key));
-
-    return operationId;
-  }
-
-  @override
   Future<void> cancelOperation(String operationId) async {
     _cancelledOperations.add(operationId);
     _safeAdd({

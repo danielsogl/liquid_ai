@@ -191,109 +191,6 @@ class LiquidAi {
     return controller.stream;
   }
 
-  /// Downloads a split vision model from multiple URLs.
-  ///
-  /// Some vision models require separate files for the language model
-  /// and the multimodal projector. This method downloads all files
-  /// and links them together.
-  ///
-  /// The first URL should be the main language model file.
-  /// Additional URLs can be projector files or other components.
-  ///
-  /// The [quantization] parameter is used for categorization and defaults
-  /// to 'custom'.
-  ///
-  /// Returns a stream of [DownloadEvent] objects indicating progress.
-  /// The stream will emit:
-  /// - [DownloadStartedEvent] when download begins
-  /// - [DownloadProgressEvent] during download with progress updates
-  /// - [DownloadCompleteEvent] when download completes successfully
-  /// - [DownloadErrorEvent] if an error occurs
-  /// - [DownloadCancelledEvent] if the operation is cancelled
-  ///
-  /// Example:
-  /// ```dart
-  /// await for (final event in liquidAi.downloadSplitModel(
-  ///   urls: [
-  ///     'https://huggingface.co/.../language.gguf?download=true',
-  ///     'https://huggingface.co/.../mmproj.gguf?download=true',
-  ///   ],
-  ///   modelId: 'my-vision-model',
-  /// )) {
-  ///   switch (event) {
-  ///     case DownloadProgressEvent(:final progress):
-  ///       print('Progress: ${progress.progressPercent}%');
-  ///     case DownloadCompleteEvent():
-  ///       print('Download complete!');
-  ///     case DownloadErrorEvent(:final error):
-  ///       print('Error: $error');
-  ///     default:
-  ///       break;
-  ///   }
-  /// }
-  /// ```
-  Stream<DownloadEvent> downloadSplitModel({
-    required List<String> urls,
-    required String modelId,
-    String quantization = 'custom',
-  }) {
-    late StreamController<DownloadEvent> controller;
-    StreamSubscription<Map<String, dynamic>>? subscription;
-    String? operationId;
-    var isClosed = false;
-
-    void safeAdd(DownloadEvent event) {
-      if (!isClosed) {
-        controller.add(event);
-      }
-    }
-
-    void safeClose() {
-      if (!isClosed) {
-        isClosed = true;
-        subscription?.cancel();
-        subscription = null;
-        controller.close();
-      }
-    }
-
-    controller = StreamController<DownloadEvent>(
-      onListen: () async {
-        subscription = _platform.progressEvents.listen((event) {
-          if (operationId != null && event['operationId'] == operationId) {
-            final eventData = _parseProgressEvent(event, operationId!);
-            if (eventData != null) {
-              safeAdd(eventData);
-              if (eventData is DownloadCompleteEvent ||
-                  eventData is DownloadErrorEvent ||
-                  eventData is DownloadCancelledEvent) {
-                safeClose();
-              }
-            }
-          }
-        });
-
-        operationId = await _platform.downloadSplitModel(
-          urls,
-          modelId,
-          quantization: quantization,
-        );
-      },
-      onCancel: () {
-        if (!isClosed) {
-          isClosed = true;
-          subscription?.cancel();
-          subscription = null;
-          if (operationId != null) {
-            _platform.cancelOperation(operationId!);
-          }
-        }
-      },
-    );
-
-    return controller.stream;
-  }
-
   /// Downloads (if needed) and loads a model.
   ///
   /// The optional [options] parameter allows configuring inference engine
@@ -533,7 +430,7 @@ class LiquidAi {
   /// Checks if a model with the given [modelId] is cached.
   ///
   /// This is useful for checking models downloaded via [downloadModelFromUrl]
-  /// or [downloadSplitModel] where a custom model ID was specified.
+  /// where a custom model ID was specified.
   ///
   /// For catalog models, use [isModelDownloaded] instead.
   ///

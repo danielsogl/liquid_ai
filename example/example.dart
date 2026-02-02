@@ -371,30 +371,7 @@ void main() async {
   // }
 
   // ============================================================
-  // 12. Download Split Vision Models
-  // ============================================================
-
-  // Some vision models require separate files for language model and projector
-  print('\nDownloading split vision model (example)...');
-  // await for (final event in liquidAi.downloadSplitModel(
-  //   urls: [
-  //     'https://huggingface.co/.../language-model.gguf?download=true',
-  //     'https://huggingface.co/.../mmproj.gguf?download=true',
-  //   ],
-  //   modelId: 'my-vision-model',
-  // )) {
-  //   switch (event) {
-  //     case DownloadProgressEvent(:final progress):
-  //       print('Progress: ${(progress.progress * 100).toStringAsFixed(1)}%');
-  //     case DownloadCompleteEvent():
-  //       print('All files downloaded!');
-  //     default:
-  //       break;
-  //   }
-  // }
-
-  // ============================================================
-  // 13. Cache Management
+  // 12. Cache Management
   // ============================================================
 
   // Check if a specific model is cached (useful for URL-downloaded models)
@@ -407,12 +384,6 @@ void main() async {
   for (final manifest in cachedModels) {
     print('${manifest.modelSlug} (${manifest.quantizationSlug})');
     print('  Path: ${manifest.localModelPath}');
-    if (manifest.supportsVision) {
-      print('  Projector: ${manifest.projectorPath}');
-    }
-    if (manifest.supportsAudio) {
-      print('  Audio Decoder: ${manifest.audioDecoderPath}');
-    }
   }
 
   // Delete all cached models (use with caution!)
@@ -435,8 +406,6 @@ void main() async {
   //       print('Model: ${manifest.modelSlug}');
   //       print('Quantization: ${manifest.quantizationSlug}');
   //       print('Local Path: ${manifest.localModelPath}');
-  //       print('Supports Vision: ${manifest.supportsVision}');
-  //       print('Supports Audio: ${manifest.supportsAudio}');
   //       if (manifest.chatTemplate != null) {
   //         print('Chat Template: ${manifest.chatTemplate}');
   //       }
@@ -453,8 +422,7 @@ void main() async {
     print('Current runner manifest:');
     print('  Model: ${m.modelSlug}');
     print('  Quantization: ${m.quantizationSlug}');
-    print('  Vision support: ${m.supportsVision}');
-    print('  Audio support: ${m.supportsAudio}');
+    print('  Path: ${m.localModelPath}');
   } else {
     print('No manifest available (depends on native implementation)');
   }

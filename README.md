@@ -204,29 +204,6 @@ await for (final event in liquidAi.loadModel('my-custom-model', 'Q4_K_M')) {
 }
 ```
 
-### Download Split Vision Models
-
-Some vision models require separate files for the language model and multimodal projector:
-
-```dart
-await for (final event in liquidAi.downloadSplitModel(
-  urls: [
-    'https://huggingface.co/.../language-model.gguf?download=true',
-    'https://huggingface.co/.../mmproj.gguf?download=true',
-  ],
-  modelId: 'my-vision-model',
-)) {
-  switch (event) {
-    case DownloadProgressEvent(:final progress):
-      print('${(progress.progress * 100).toStringAsFixed(1)}%');
-    case DownloadCompleteEvent():
-      print('All files downloaded!');
-    default:
-      break;
-  }
-}
-```
-
 ### Cache Management
 
 List and manage cached models:
@@ -243,9 +220,6 @@ final cachedModels = await liquidAi.getCachedModels();
 for (final manifest in cachedModels) {
   print('${manifest.modelSlug} (${manifest.quantizationSlug})');
   print('  Path: ${manifest.localModelPath}');
-  if (manifest.supportsVision) {
-    print('  Projector: ${manifest.projectorPath}');
-  }
 }
 
 // Delete all cached models to free storage
@@ -264,8 +238,6 @@ await for (final event in liquidAi.loadModel(model.slug, quantization.slug)) {
       print('Model: ${manifest.modelSlug}');
       print('Quantization: ${manifest.quantizationSlug}');
       print('Path: ${manifest.localModelPath}');
-      print('Supports Vision: ${manifest.supportsVision}');
-      print('Supports Audio: ${manifest.supportsAudio}');
 
       // Access via runner as well
       print('Runner manifest: ${event.runner.manifest}');

@@ -50,19 +50,6 @@ class MethodChannelLiquidAi extends LiquidAiPlatform {
   }
 
   @override
-  Future<String> downloadSplitModel(
-    List<String> urls,
-    String modelId, {
-    String quantization = 'custom',
-  }) async {
-    final operationId = await methodChannel.invokeMethod<String>(
-      'downloadSplitModel',
-      {'urls': urls, 'modelId': modelId, 'quantization': quantization},
-    );
-    return operationId!;
-  }
-
-  @override
   Future<String> loadModel(
     String model,
     String quantization, {

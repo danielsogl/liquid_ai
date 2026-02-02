@@ -1,16 +1,12 @@
 /// Manifest containing metadata about a loaded model.
 ///
-/// This class provides detailed information about a model's configuration,
-/// including paths to additional model files for vision and audio capabilities.
+/// This class provides detailed information about a model's configuration.
 final class ModelManifest {
   /// Creates a new [ModelManifest].
   const ModelManifest({
     required this.modelSlug,
     required this.quantizationSlug,
     required this.localModelPath,
-    this.projectorPath,
-    this.audioDecoderPath,
-    this.audioTokenizerPath,
     this.chatTemplate,
   });
 
@@ -20,9 +16,6 @@ final class ModelManifest {
       modelSlug: map['modelSlug'] as String,
       quantizationSlug: map['quantizationSlug'] as String,
       localModelPath: map['localModelPath'] as String,
-      projectorPath: map['projectorPath'] as String?,
-      audioDecoderPath: map['audioDecoderPath'] as String?,
-      audioTokenizerPath: map['audioTokenizerPath'] as String?,
       chatTemplate: map['chatTemplate'] as String?,
     );
   }
@@ -36,31 +29,10 @@ final class ModelManifest {
   /// The local file path to the main model file.
   final String localModelPath;
 
-  /// The local file path to the vision projector file.
-  ///
-  /// Only set for vision models that use a separate projector file.
-  final String? projectorPath;
-
-  /// The local file path to the audio decoder file.
-  ///
-  /// Only set for audio models.
-  final String? audioDecoderPath;
-
-  /// The local file path to the audio tokenizer file.
-  ///
-  /// Only set for audio models.
-  final String? audioTokenizerPath;
-
   /// The chat template for the model.
   ///
   /// This defines how messages should be formatted for the model.
   final String? chatTemplate;
-
-  /// Whether this model supports vision input.
-  bool get supportsVision => projectorPath != null;
-
-  /// Whether this model supports audio input.
-  bool get supportsAudio => audioDecoderPath != null;
 
   /// Converts this manifest to a map.
   Map<String, dynamic> toMap() {
@@ -68,9 +40,6 @@ final class ModelManifest {
       'modelSlug': modelSlug,
       'quantizationSlug': quantizationSlug,
       'localModelPath': localModelPath,
-      if (projectorPath != null) 'projectorPath': projectorPath,
-      if (audioDecoderPath != null) 'audioDecoderPath': audioDecoderPath,
-      if (audioTokenizerPath != null) 'audioTokenizerPath': audioTokenizerPath,
       if (chatTemplate != null) 'chatTemplate': chatTemplate,
     };
   }
@@ -82,9 +51,6 @@ final class ModelManifest {
         other.modelSlug == modelSlug &&
         other.quantizationSlug == quantizationSlug &&
         other.localModelPath == localModelPath &&
-        other.projectorPath == projectorPath &&
-        other.audioDecoderPath == audioDecoderPath &&
-        other.audioTokenizerPath == audioTokenizerPath &&
         other.chatTemplate == chatTemplate;
   }
 
@@ -94,9 +60,6 @@ final class ModelManifest {
       modelSlug,
       quantizationSlug,
       localModelPath,
-      projectorPath,
-      audioDecoderPath,
-      audioTokenizerPath,
       chatTemplate,
     );
   }
@@ -107,9 +70,6 @@ final class ModelManifest {
         'modelSlug: $modelSlug, '
         'quantizationSlug: $quantizationSlug, '
         'localModelPath: $localModelPath'
-        '${projectorPath != null ? ', projectorPath: $projectorPath' : ''}'
-        '${audioDecoderPath != null ? ', audioDecoderPath: $audioDecoderPath' : ''}'
-        '${audioTokenizerPath != null ? ', audioTokenizerPath: $audioTokenizerPath' : ''}'
         '${chatTemplate != null ? ', chatTemplate: $chatTemplate' : ''}'
         ')';
   }

@@ -21,6 +21,10 @@ class LiquidAiPlugin :
     private lateinit var conversationManager: ConversationManager
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
+    // / Returns true if the plugin is attached to a Flutter engine.
+    private val isAttached: Boolean
+        get() = ::modelManager.isInitialized
+
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "liquid_ai")
         channel.setMethodCallHandler(this)
@@ -78,6 +82,22 @@ class LiquidAiPlugin :
 
             "deleteModel" -> {
                 handleDeleteModel(call, result)
+            }
+
+            "getCachedModels" -> {
+                handleGetCachedModels(result)
+            }
+
+            "isModelCached" -> {
+                handleIsModelCached(call, result)
+            }
+
+            "deleteAllModels" -> {
+                handleDeleteAllModels(result)
+            }
+
+            "downloadModelFromUrl" -> {
+                handleDownloadModelFromUrl(call, result)
             }
 
             "cancelOperation" -> {
@@ -343,6 +363,93 @@ class LiquidAiPlugin :
 
         modelManager.cancelOperation(operationId)
         result.success(null)
+    }
+
+    private fun handleGetCachedModels(result: Result) {
+        if (!isAttached) {
+            result.error("NOT_ATTACHED", "Plugin is not attached to Flutter engine", null)
+            return
+        }
+
+        scope.launch {
+            val models =
+                withContext(Dispatchers.IO) {
+                    modelManager.getCachedModels()
+                }
+            result.success(models)
+        }
+    }
+
+    private fun handleIsModelCached(
+        call: MethodCall,
+        result: Result,
+    ) {
+        val modelId = call.argument<String>("modelId")
+
+        if (modelId == null) {
+            result.error(
+                "INVALID_ARGUMENTS",
+                "Missing required argument: modelId",
+                null,
+            )
+            return
+        }
+
+        scope.launch {
+            val isCached =
+                withContext(Dispatchers.IO) {
+                    modelManager.isModelCached(modelId)
+                }
+            result.success(isCached)
+        }
+    }
+
+    private fun handleDeleteAllModels(result: Result) {
+        if (!isAttached) {
+            result.error("NOT_ATTACHED", "Plugin is not attached to Flutter engine", null)
+            return
+        }
+
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    modelManager.deleteAllModels()
+                }
+                result.success(null)
+            } catch (e: Exception) {
+                result.error(
+                    "DELETE_FAILED",
+                    e.message ?: "Delete all models failed",
+                    null,
+                )
+            }
+        }
+    }
+
+    private fun handleDownloadModelFromUrl(
+        call: MethodCall,
+        result: Result,
+    ) {
+        val url = call.argument<String>("url")
+        val modelId = call.argument<String>("modelId")
+        val quantization = call.argument<String>("quantization") ?: "custom"
+
+        if (url == null || modelId == null) {
+            result.error(
+                "INVALID_ARGUMENTS",
+                "Missing required arguments: url, modelId",
+                null,
+            )
+            return
+        }
+
+        scope.launch {
+            val operationId =
+                withContext(Dispatchers.IO) {
+                    modelManager.downloadModelFromUrl(url, modelId, quantization)
+                }
+            result.success(operationId)
+        }
     }
 
     private fun handleGetModelStatus(

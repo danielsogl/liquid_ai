@@ -525,4 +525,222 @@ class ModelRunnerManager(
         cancelledOperations.clear()
         currentLoadedModelInfo = null
     }
+
+    // MARK: - Cache Management
+
+    // / Gets all cached models as a list of manifest maps.
+    fun getCachedModels(): List<Map<String, Any?>> {
+        val models = mutableListOf<Map<String, Any?>>()
+
+        if (!modelStorageDir.exists()) return models
+
+        modelStorageDir.listFiles()?.forEach { dir ->
+            if (dir.isDirectory) {
+                val manifestFile = java.io.File(dir, "${dir.name}.json")
+                if (manifestFile.exists()) {
+                    // Parse the folder name to get model and quantization
+                    val parts = dir.name.split("-")
+                    if (parts.size >= 2) {
+                        val quantization = parts.last()
+                        val model = parts.dropLast(1).joinToString("-")
+
+                        models.add(
+                            mapOf(
+                                "modelSlug" to model,
+                                "quantizationSlug" to quantization,
+                                "localModelPath" to dir.absolutePath,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+
+        return models
+    }
+
+    // / Checks if a model with the given ID is cached.
+    fun isModelCached(modelId: String): Boolean {
+        if (!modelStorageDir.exists()) return false
+
+        return modelStorageDir.listFiles()?.any { dir ->
+            dir.isDirectory && dir.name.startsWith("$modelId-")
+        } ?: false
+    }
+
+    // / Deletes all cached models.
+    fun deleteAllModels() {
+        if (modelStorageDir.exists()) {
+            modelStorageDir.listFiles()?.forEach { dir ->
+                if (dir.isDirectory) {
+                    deleteDirectoryRecursively(dir)
+                }
+            }
+        }
+    }
+
+    // MARK: - URL Download
+
+    // / Downloads a model from a direct URL (e.g., Hugging Face).
+    fun downloadModelFromUrl(
+        url: String,
+        modelId: String,
+        quantization: String,
+    ): String {
+        val operationId = UUID.randomUUID().toString()
+        cancelledOperations.remove(operationId)
+
+        progressHandler.sendProgress(
+            operationId = operationId,
+            type = OperationType.DOWNLOAD,
+            status = OperationStatus.STARTED,
+        )
+
+        val job =
+            scope.launch {
+                try {
+                    val downloadUrl = java.net.URL(url)
+
+                    // Create destination directory using model/quantization structure
+                    val modelDir = java.io.File(java.io.File(modelStorageDir, modelId), quantization)
+                    modelDir.mkdirs()
+
+                    // Determine filename from URL (remove query params)
+                    var filename = downloadUrl.path.substringAfterLast("/")
+                    if (filename.contains("?")) {
+                        filename = filename.substringBefore("?")
+                    }
+                    if (filename.isEmpty()) {
+                        filename = "model.gguf"
+                    }
+                    val destinationFile = java.io.File(modelDir, filename)
+
+                    // Check if already downloaded
+                    if (destinationFile.exists() && destinationFile.length() > 0) {
+                        progressHandler.sendProgress(
+                            operationId = operationId,
+                            type = OperationType.DOWNLOAD,
+                            status = OperationStatus.COMPLETED,
+                            progress = 1.0,
+                        )
+                        activeTasks.remove(operationId)
+                        return@launch
+                    }
+
+                    // Download with progress tracking
+                    downloadFile(
+                        url = downloadUrl,
+                        destination = destinationFile,
+                        operationId = operationId,
+                        progressMultiplier = 1.0,
+                        progressOffset = 0.0,
+                    )
+
+                    if (!cancelledOperations.contains(operationId)) {
+                        progressHandler.sendProgress(
+                            operationId = operationId,
+                            type = OperationType.DOWNLOAD,
+                            status = OperationStatus.COMPLETED,
+                            progress = 1.0,
+                        )
+                    }
+
+                    activeTasks.remove(operationId)
+                } catch (e: Exception) {
+                    if (!cancelledOperations.contains(operationId)) {
+                        progressHandler.sendProgress(
+                            operationId = operationId,
+                            type = OperationType.DOWNLOAD,
+                            status = OperationStatus.ERROR,
+                            error = e.message ?: "Download failed",
+                            errorCode = parseErrorCode(e),
+                        )
+                    }
+                    activeTasks.remove(operationId)
+                }
+            }
+
+        activeTasks[operationId] = job
+        return operationId
+    }
+
+    // / Downloads a file from a URL to a local destination with progress tracking.
+    private suspend fun downloadFile(
+        url: java.net.URL,
+        destination: java.io.File,
+        operationId: String,
+        progressMultiplier: Double,
+        progressOffset: Double,
+    ) {
+        withContext(Dispatchers.IO) {
+            // Remove existing file if present
+            if (destination.exists()) {
+                destination.delete()
+            }
+
+            val connection = url.openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 30000
+            connection.readTimeout = 30000
+            connection.setRequestProperty("User-Agent", "LiquidAI-Flutter/1.0")
+
+            try {
+                connection.connect()
+
+                if (connection.responseCode !in 200..299) {
+                    throw Exception("HTTP error: ${connection.responseCode}")
+                }
+
+                val contentLength = connection.contentLengthLong
+                var receivedBytes = 0L
+                var lastProgressTime = System.currentTimeMillis()
+                var lastReceivedBytes = 0L
+
+                connection.inputStream.use { input ->
+                    java.io.FileOutputStream(destination).use { output ->
+                        val buffer = ByteArray(65536) // 64KB buffer
+                        var bytesRead: Int
+
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            if (cancelledOperations.contains(operationId)) {
+                                throw kotlinx.coroutines.CancellationException("Download cancelled")
+                            }
+
+                            output.write(buffer, 0, bytesRead)
+                            receivedBytes += bytesRead
+
+                            // Update progress every 100ms
+                            val currentTime = System.currentTimeMillis()
+                            if (currentTime - lastProgressTime >= 100) {
+                                val elapsedMs = currentTime - lastProgressTime
+                                val bytesInInterval = receivedBytes - lastReceivedBytes
+                                val speed = (bytesInInterval * 1000L) / elapsedMs
+
+                                val fileProgress =
+                                    if (contentLength > 0) {
+                                        receivedBytes.toDouble() / contentLength.toDouble()
+                                    } else {
+                                        0.0
+                                    }
+                                val totalProgress = progressOffset + (fileProgress * progressMultiplier)
+
+                                progressHandler.sendProgress(
+                                    operationId = operationId,
+                                    type = OperationType.DOWNLOAD,
+                                    status = OperationStatus.PROGRESS,
+                                    progress = totalProgress,
+                                    speed = speed,
+                                )
+
+                                lastProgressTime = currentTime
+                                lastReceivedBytes = receivedBytes
+                            }
+                        }
+                    }
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
+    }
 }

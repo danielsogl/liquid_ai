@@ -14,29 +14,20 @@ void main() {
         expect(manifest.modelSlug, 'test-model');
         expect(manifest.quantizationSlug, 'Q4_K_M');
         expect(manifest.localModelPath, '/path/to/model.gguf');
-        expect(manifest.projectorPath, isNull);
-        expect(manifest.audioDecoderPath, isNull);
-        expect(manifest.audioTokenizerPath, isNull);
         expect(manifest.chatTemplate, isNull);
       });
 
       test('creates instance with all fields', () {
         const manifest = ModelManifest(
-          modelSlug: 'vision-model',
+          modelSlug: 'test-model',
           quantizationSlug: 'Q8_0',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
-          audioDecoderPath: '/path/to/decoder.bin',
-          audioTokenizerPath: '/path/to/tokenizer.bin',
           chatTemplate: '<|user|>{prompt}<|assistant|>',
         );
 
-        expect(manifest.modelSlug, 'vision-model');
+        expect(manifest.modelSlug, 'test-model');
         expect(manifest.quantizationSlug, 'Q8_0');
         expect(manifest.localModelPath, '/path/to/model.gguf');
-        expect(manifest.projectorPath, '/path/to/projector.gguf');
-        expect(manifest.audioDecoderPath, '/path/to/decoder.bin');
-        expect(manifest.audioTokenizerPath, '/path/to/tokenizer.bin');
         expect(manifest.chatTemplate, '<|user|>{prompt}<|assistant|>');
       });
     });
@@ -54,31 +45,22 @@ void main() {
         expect(manifest.modelSlug, 'test-model');
         expect(manifest.quantizationSlug, 'Q4_K_M');
         expect(manifest.localModelPath, '/path/to/model.gguf');
-        expect(manifest.projectorPath, isNull);
-        expect(manifest.audioDecoderPath, isNull);
-        expect(manifest.audioTokenizerPath, isNull);
         expect(manifest.chatTemplate, isNull);
       });
 
       test('creates instance from map with all fields', () {
         final map = {
-          'modelSlug': 'vision-model',
+          'modelSlug': 'test-model',
           'quantizationSlug': 'Q8_0',
           'localModelPath': '/path/to/model.gguf',
-          'projectorPath': '/path/to/projector.gguf',
-          'audioDecoderPath': '/path/to/decoder.bin',
-          'audioTokenizerPath': '/path/to/tokenizer.bin',
           'chatTemplate': '<|user|>{prompt}<|assistant|>',
         };
 
         final manifest = ModelManifest.fromMap(map);
 
-        expect(manifest.modelSlug, 'vision-model');
+        expect(manifest.modelSlug, 'test-model');
         expect(manifest.quantizationSlug, 'Q8_0');
         expect(manifest.localModelPath, '/path/to/model.gguf');
-        expect(manifest.projectorPath, '/path/to/projector.gguf');
-        expect(manifest.audioDecoderPath, '/path/to/decoder.bin');
-        expect(manifest.audioTokenizerPath, '/path/to/tokenizer.bin');
         expect(manifest.chatTemplate, '<|user|>{prompt}<|assistant|>');
       });
 
@@ -87,17 +69,11 @@ void main() {
           'modelSlug': 'test-model',
           'quantizationSlug': 'Q4_K_M',
           'localModelPath': '/path/to/model.gguf',
-          'projectorPath': null,
-          'audioDecoderPath': null,
-          'audioTokenizerPath': null,
           'chatTemplate': null,
         };
 
         final manifest = ModelManifest.fromMap(map);
 
-        expect(manifest.projectorPath, isNull);
-        expect(manifest.audioDecoderPath, isNull);
-        expect(manifest.audioTokenizerPath, isNull);
         expect(manifest.chatTemplate, isNull);
       });
     });
@@ -115,31 +91,22 @@ void main() {
         expect(map['modelSlug'], 'test-model');
         expect(map['quantizationSlug'], 'Q4_K_M');
         expect(map['localModelPath'], '/path/to/model.gguf');
-        expect(map.containsKey('projectorPath'), isFalse);
-        expect(map.containsKey('audioDecoderPath'), isFalse);
-        expect(map.containsKey('audioTokenizerPath'), isFalse);
         expect(map.containsKey('chatTemplate'), isFalse);
       });
 
       test('converts to map with all fields', () {
         const manifest = ModelManifest(
-          modelSlug: 'vision-model',
+          modelSlug: 'test-model',
           quantizationSlug: 'Q8_0',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
-          audioDecoderPath: '/path/to/decoder.bin',
-          audioTokenizerPath: '/path/to/tokenizer.bin',
           chatTemplate: '<|user|>{prompt}<|assistant|>',
         );
 
         final map = manifest.toMap();
 
-        expect(map['modelSlug'], 'vision-model');
+        expect(map['modelSlug'], 'test-model');
         expect(map['quantizationSlug'], 'Q8_0');
         expect(map['localModelPath'], '/path/to/model.gguf');
-        expect(map['projectorPath'], '/path/to/projector.gguf');
-        expect(map['audioDecoderPath'], '/path/to/decoder.bin');
-        expect(map['audioTokenizerPath'], '/path/to/tokenizer.bin');
         expect(map['chatTemplate'], '<|user|>{prompt}<|assistant|>');
       });
 
@@ -148,7 +115,6 @@ void main() {
           modelSlug: 'test-model',
           quantizationSlug: 'Q4_K_M',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
           chatTemplate: 'template',
         );
 
@@ -156,64 +122,6 @@ void main() {
         final restored = ModelManifest.fromMap(map);
 
         expect(restored, equals(original));
-      });
-    });
-
-    group('supportsVision', () {
-      test('returns true when projectorPath is set', () {
-        const manifest = ModelManifest(
-          modelSlug: 'vision-model',
-          quantizationSlug: 'Q8_0',
-          localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
-        );
-
-        expect(manifest.supportsVision, isTrue);
-      });
-
-      test('returns false when projectorPath is null', () {
-        const manifest = ModelManifest(
-          modelSlug: 'text-model',
-          quantizationSlug: 'Q4_K_M',
-          localModelPath: '/path/to/model.gguf',
-        );
-
-        expect(manifest.supportsVision, isFalse);
-      });
-    });
-
-    group('supportsAudio', () {
-      test('returns true when audioDecoderPath is set', () {
-        const manifest = ModelManifest(
-          modelSlug: 'audio-model',
-          quantizationSlug: 'Q8_0',
-          localModelPath: '/path/to/model.gguf',
-          audioDecoderPath: '/path/to/decoder.bin',
-        );
-
-        expect(manifest.supportsAudio, isTrue);
-      });
-
-      test('returns false when audioDecoderPath is null', () {
-        const manifest = ModelManifest(
-          modelSlug: 'text-model',
-          quantizationSlug: 'Q4_K_M',
-          localModelPath: '/path/to/model.gguf',
-        );
-
-        expect(manifest.supportsAudio, isFalse);
-      });
-
-      test('returns true even without audioTokenizerPath', () {
-        const manifest = ModelManifest(
-          modelSlug: 'audio-model',
-          quantizationSlug: 'Q8_0',
-          localModelPath: '/path/to/model.gguf',
-          audioDecoderPath: '/path/to/decoder.bin',
-          audioTokenizerPath: null,
-        );
-
-        expect(manifest.supportsAudio, isTrue);
       });
     });
 
@@ -288,14 +196,14 @@ void main() {
           modelSlug: 'test-model',
           quantizationSlug: 'Q4_K_M',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
+          chatTemplate: 'template1',
         );
 
         const manifest2 = ModelManifest(
           modelSlug: 'test-model',
           quantizationSlug: 'Q4_K_M',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: null,
+          chatTemplate: null,
         );
 
         expect(manifest1, isNot(equals(manifest2)));
@@ -318,14 +226,14 @@ void main() {
           modelSlug: 'test-model',
           quantizationSlug: 'Q4_K_M',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
+          chatTemplate: 'template',
         );
 
         const manifest2 = ModelManifest(
           modelSlug: 'test-model',
           quantizationSlug: 'Q4_K_M',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
+          chatTemplate: 'template',
         );
 
         expect(manifest1.hashCode, equals(manifest2.hashCode));
@@ -367,17 +275,14 @@ void main() {
 
       test('includes optional fields when present', () {
         const manifest = ModelManifest(
-          modelSlug: 'vision-model',
+          modelSlug: 'test-model',
           quantizationSlug: 'Q8_0',
           localModelPath: '/path/to/model.gguf',
-          projectorPath: '/path/to/projector.gguf',
           chatTemplate: 'template',
         );
 
         final str = manifest.toString();
 
-        expect(str, contains('projectorPath'));
-        expect(str, contains('/path/to/projector.gguf'));
         expect(str, contains('chatTemplate'));
         expect(str, contains('template'));
       });
@@ -391,9 +296,6 @@ void main() {
 
         final str = manifest.toString();
 
-        expect(str, isNot(contains('projectorPath')));
-        expect(str, isNot(contains('audioDecoderPath')));
-        expect(str, isNot(contains('audioTokenizerPath')));
         expect(str, isNot(contains('chatTemplate')));
       });
     });
