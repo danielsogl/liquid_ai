@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/danielsogl/liquid_ai/compare/v1.0.0...v1.0.1) (2026-02-02)
+
+
+### Bug Fixes
+
+* **ci:** trigger publish with tag ref via workflow_dispatch ([b5f411c](https://github.com/danielsogl/liquid_ai/commit/b5f411cd4c9a7890d5faf15581434da1400cb7fc))
+
 ## 1.0.0 (2026-02-02)
 
 
