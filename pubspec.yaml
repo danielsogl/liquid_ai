@@ -1,8 +1,14 @@
 name: liquid_ai
-description: "A Flutter package for Liquid AI integrations with LEAP SDK."
+description: "A Flutter package for Liquid AI integrations with LEAP SDK. Run powerful on-device AI models with text generation, streaming chat, structured output, function calling, and vision support."
 version: 0.0.1
 homepage: https://github.com/danielsogl/liquid_ai
 repository: https://github.com/danielsogl/liquid_ai
+topics:
+  - ai
+  - llm
+  - on-device
+  - machine-learning
+  - flutter
 
 environment:
   sdk: ^3.10.8
