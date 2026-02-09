@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/danielsogl/liquid_ai/compare/v1.2.1...v1.2.2) (2026-02-09)
+
+
+### Bug Fixes
+
+* shorten package description to meet pub.dev guidelines ([305022b](https://github.com/danielsogl/liquid_ai/commit/305022b7a48a6daa62331098273b4168fbc8966f))
+
 ## [1.2.1](https://github.com/danielsogl/liquid_ai/compare/v1.2.0...v1.2.1) (2026-02-02)
 
 

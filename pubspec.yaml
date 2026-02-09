@@ -1,6 +1,6 @@
 name: liquid_ai
 description: "Run on-device AI models in Flutter with LEAP SDK. Supports text generation, streaming chat, structured output, function calling, and vision."
-version: 1.2.1
+version: 1.2.2
 homepage: https://github.com/danielsogl/liquid_ai
 repository: https://github.com/danielsogl/liquid_ai
 topics:
